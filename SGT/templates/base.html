@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}SGT{% endblock %}</title>
+
+    <!-- Bootstrap 5 -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+    <!-- DataTables + Bootstrap 5 + Responsive -->
+    <link rel="stylesheet"
+          href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet"
+          href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+
+    <!-- Font Awesome للأيقونات -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        body {
+            min-height: 100vh;
+            background-color: #f5f6fa;
+        }
+
+        .layout-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: linear-gradient(180deg, #0d6efd, #003f88);
+            color: #fff;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar-header {
+            padding: 1rem 1.2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .sidebar-header i {
+            font-size: 1.3rem;
+        }
+
+        .sidebar .nav-link {
+            color: #dbe9ff;
+            padding: 0.65rem 1.2rem;
+            font-size: .95rem;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            border-radius: 0;
+        }
+
+        .sidebar .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+        }
+
+        .sidebar .nav-section-title {
+            padding: 0.75rem 1.2rem 0.25rem;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            opacity: .8;
+        }
+
+        /* عند الطي على الشاشات الكبيرة */
+        .sidebar.collapsed .nav-link span.label-text,
+        .sidebar.collapsed .nav-section-title,
+        .sidebar.collapsed .sidebar-header span.brand-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .top-navbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e3ec;
+        }
+
+        .top-navbar .navbar-brand {
+            font-weight: 500;
+        }
+
+        .main-content {
+            padding: 1.5rem 1.5rem 2rem;
+        }
+
+        .dataTables_wrapper .row {
+            width: 100%;
+        }
+
+        /* ✅ طبقة الـ Overlay للموبايل */
+        .mobile-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 1035;
+            display: none;
+        }
+
+        .mobile-overlay.active {
+            display: block;
+        }
+
+        /* =========================================================
+           ✅ تثبيت الشريط الجانبي على الشاشات الكبيرة (كما عندك)
+           ========================================================= */
+        @media (min-width: 769px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                overflow-y: auto;
+                z-index: 1040;
+            }
+
+            /* ✅ إزاحة المحتوى حسب عرض السايدبار */
+            .content-area {
+                margin-left: 240px;
+            }
+
+            /* ✅ عند طيّ السايدبار */
+            .sidebar.collapsed ~ .content-area {
+                margin-left: 60px;
+            }
+
+            /* =========================================================
+               ✅ الإضافة المطلوبة: تثبيت الشريط العلوي (Top Navbar)
+               ========================================================= */
+            .top-navbar {
+                position: fixed;
+                top: 0;
+                left: 240px;
+                right: 0;
+                z-index: 1030;
+                height: 56px;
+                display: flex;
+                align-items: center;
+            }
+
+            /* ✅ عندما يكون السايدبار مطويّ */
+            .sidebar.collapsed ~ .content-area .top-navbar {
+                left: 60px;
+            }
+
+            /* ✅ تعويض ارتفاع الشريط العلوي حتى لا يغطي المحتوى */
+            .main-content {
+                padding-top: calc(56px + 1.5rem);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                z-index: 1040;
+                height: 100vh;
+                left: 0;
+                top: 0;
+                transform: translateX(0);
+            }
+
+            .sidebar.hidden-mobile {
+                transform: translateX(-100%);
+            }
+
+            .content-area {
+                margin-left: 0;
+            }
+
+            /* ✅ على الموبايل نخلي الشريط العلوي طبيعي (غير ثابت) */
+            .top-navbar {
+                position: sticky;
+                top: 0;
+                z-index: 1030;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="layout-wrapper" id="layoutWrapper">
+
+    <!-- 🔹 الشريط الجانبي -->
+    <nav class="sidebar hidden-mobile" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-bus-simple"></i>
+            <span class="brand-text">SGT - Transport</span>
+        </div>
+
+        <div class="nav flex-column mt-2">
+            <div class="nav-section-title">Navigation</div>
+
+            <a href="{% url 'dashboard' %}" class="nav-link">
+                <i class="fa-solid fa-gauge-high"></i>
+                <span class="label-text">Tableau de bord</span>
+            </a>
+
+            <a href="{% url 'liste_trajets' %}" class="nav-link">
+                <i class="fa-solid fa-route"></i>
+                <span class="label-text">Trajets</span>
+            </a>
+
+            <a href="{% url 'liste_vehicules' %}" class="nav-link">
+                <i class="fa-solid fa-truck-front"></i>
+                <span class="label-text">Véhicules</span>
+            </a>
+
+            <a href="{% url 'liste_chauffeurs' %}" class="nav-link">
+                <i class="fa-solid fa-id-card-clip"></i>
+                <span class="label-text">Chauffeurs</span>
+            </a>
+
+            <a href="{% url 'liste_voyages' %}" class="nav-link">
+                <i class="fa-solid fa-ticket-alt"></i>
+                <span class="label-text">Voyages</span>
+            </a>
+
+            <a href="{% url 'liste_reservations' %}" class="nav-link">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <span class="label-text">Réservations</span>
+            </a>
+
+            <a href="{% url 'liste_clients' %}" class="nav-link">
+                <i class="fa-solid fa-user-group"></i>
+                <span class="label-text">Clients</span>
+            </a>
+
+            {% if user.is_superuser %}
+                <div class="nav-section-title">Administration</div>
+                <a href="{% url 'gestion_comptes' %}" class="nav-link">
+                    <i class="fa-solid fa-user-shield"></i>
+                    <span class="label-text">Gestion des comptes</span>
+                </a>
+                <a href="/admin/" class="nav-link">
+                    <i class="fa-solid fa-toolbox"></i>
+                    <span class="label-text">Django Admin</span>
+                </a>
+            {% endif %}
+        </div>
+
+        {% if user.is_authenticated %}
+            <div class="mt-auto py-3 px-3 border-top border-light-subtle small">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span>
+                        <i class="fa-regular fa-circle-user me-1"></i>
+                        {{ user.username }}
+                    </span>
+                    <a href="{% url 'logout' %}" class="text-light text-decoration-none">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </nav>
+
+    <!-- 🔹 Overlay للموبايل -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- 🔹 منطقة المحتوى -->
+    <div class="content-area">
+        <!-- شريط علوي مع زر إظهار/إخفاء الـ sidebar -->
+        <nav class="navbar top-navbar px-3">
+            <div class="d-flex align-items-center w-100">
+                <button id="sidebarToggle" class="btn btn-outline-primary btn-sm me-3">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <span class="navbar-brand mb-0">
+                    {% block header_title %}{% endblock %}
+                </span>
+
+                <div class="ms-auto d-flex align-items-center">
+                    {% if user.is_authenticated %}
+                        <span class="me-3 d-none d-md-inline">
+                            Bonjour, <strong>{{ user.username }}</strong>
+                        </span>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-sm btn-primary">
+                            Connexion
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- DataTables JS + Bootstrap 5 + Responsive -->
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+
+<script>
+    // ✅ تهيئة DataTables لكل الجداول التي تحمل class="datatable"
+    $(document).ready(function () {
+        $('table.datatable').DataTable({
+            responsive: true,
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'
+            }
+        });
+    });
+
+    // ✅ إخفاء/إظهار الشريط الجانبي + overlay على الهاتف
+    document.addEventListener('DOMContentLoaded', function () {
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        const overlay = document.getElementById('mobileOverlay');
+
+        function toggleSidebar() {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('hidden-mobile');
+                const isOpen = !sidebar.classList.contains('hidden-mobile');
+                if (isOpen) overlay.classList.add('active');
+                else overlay.classList.remove('active');
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        }
+
+        toggleBtn.addEventListener('click', function () {
+            toggleSidebar();
+        });
+
+        overlay.addEventListener('click', function () {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.add('hidden-mobile');
+                overlay.classList.remove('active');
+            }
+        });
+
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('#sidebar a.nav-link').forEach(function (link) {
+            const href = link.getAttribute('href');
+            if (!href) return;
+
+            if (currentPath === href || (href !== '/' && currentPath.startsWith(href))) {
+                link.classList.add('active');
+            }
+        });
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth > 768) {
+                overlay.classList.remove('active');
+                sidebar.classList.remove('hidden-mobile');
+            } else {
+                sidebar.classList.add('hidden-mobile');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

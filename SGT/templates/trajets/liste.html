@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Trajets - SGT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Trajets</h2>
+    <a href="{% url 'ajouter_trajet' %}" class="btn btn-primary">+ Ajouter un trajet</a>
+</div>
+
+<table class="table table-striped table-bordered datatable">
+    <thead class="table-light">
+        <tr>
+            <th>Ville de départ</th>
+            <th>Ville d’arrivée</th>
+            <th>Distance (km)</th>
+            <th>Durée prévue</th>
+            <th class="text-end">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in trajets %}
+            <tr>
+                <td>{{ t.ville_depart }}</td>
+                <td>{{ t.ville_arrivee }}</td>
+                <td>{{ t.distance_km }}</td>
+                <td>{{ t.duree_prevue }}</td>
+                <td class="text-end">
+                    <a href="{% url 'modifier_trajet' t.id_trajet %}"
+                       class="btn btn-sm btn-warning">Modifier</a>
+                    <a href="{% url 'supprimer_trajet' t.id_trajet %}"
+                       class="btn btn-sm btn-danger"
+                       onclick="return confirm('Supprimer ce trajet ?');">
+                        Supprimer
+                    </a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" class="text-center">Aucun trajet.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

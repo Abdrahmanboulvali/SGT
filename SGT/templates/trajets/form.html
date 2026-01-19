@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Trajet - SGT{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-3">
+    {% if form.instance.pk %}Modifier le trajet{% else %}Ajouter un trajet{% endif %}
+</h2>
+
+<style>
+    #map {
+        height: 350px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+</style>
+
+<div class="row">
+    <!-- 📝 الفورم كما كان في كارت -->
+    <div class="col-md-5">
+        <form method="post" class="card p-3 mb-3">
+            {% csrf_token %}
+
+            <!-- Ville de départ -->
+            <div class="mb-3">
+                <label class="form-label">Ville de départ</label>
+                <select id="id_ville_depart" name="ville_depart" class="form-select" required>
+                    <option value="">-- Choisir la ville de départ --</option>
+
+                    <optgroup label="Wilaya de Nouakchott">
+                        <option value="Nouakchott">Nouakchott</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de Dakhlet Nouadhibou">
+                        <option value="Nouadhibou">Nouadhibou</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de Trarza">
+                        <option value="Rosso">Rosso</option>
+                        <option value="Boghé">Boghé</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Brakna">
+                        <option value="Aleg">Aleg</option>
+                        <option value="Boutilimit">Boutilimit</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Gorgol">
+                        <option value="Kaédi">Kaédi</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Guidimakha">
+                        <option value="Sélibaby">Sélibaby</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de l’Assaba">
+                        <option value="Kiffa">Kiffa</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Hodh El Gharbi">
+                        <option value="Aïoun el Atrouss">Aïoun el Atrouss</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Hodh Ech Chargui">
+                        <option value="Néma">Néma</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de Tagant">
+                        <option value="Tidjikja">Tidjikja</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de l’Adrar">
+                        <option value="Atar">Atar</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de l’Inchiri">
+                        <option value="Akjoujt">Akjoujt</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de Tiris Zemmour">
+                        <option value="Zouerate">Zouerate</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Ville d’arrivée -->
+            <div class="mb-3">
+                <label class="form-label">Ville d’arrivée</label>
+                <select id="id_ville_arrivee" name="ville_arrivee" class="form-select" required>
+                    <option value="">-- Choisir la ville d’arrivée --</option>
+
+                    <optgroup label="Wilaya de Nouakchott">
+                        <option value="Nouakchott">Nouakchott</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de Dakhlet Nouadhibou">
+                        <option value="Nouadhibou">Nouadhibou</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de Trarza">
+                        <option value="Rosso">Rosso</option>
+                        <option value="Boghé">Boghé</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Brakna">
+                        <option value="Aleg">Aleg</option>
+                        <option value="Boutilimit">Boutilimit</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Gorgol">
+                        <option value="Kaédi">Kaédi</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Guidimakha">
+                        <option value="Sélibaby">Sélibaby</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de l’Assaba">
+                        <option value="Kiffa">Kiffa</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Hodh El Gharbi">
+                        <option value="Aïoun el Atrouss">Aïoun el Atrouss</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya du Hodh Ech Chargui">
+                        <option value="Néma">Néma</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de Tagant">
+                        <option value="Tidjikja">Tidjikja</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de l’Adrar">
+                        <option value="Atar">Atar</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de l’Inchiri">
+                        <option value="Akjoujt">Akjoujt</option>
+                    </optgroup>
+
+                    <optgroup label="Wilaya de Tiris Zemmour">
+                        <option value="Zouerate">Zouerate</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Distance (km) – من الفورم -->
+            <div class="mb-3">
+                <label class="form-label">Distance (km)</label>
+                {{ form.distance_km }}
+            </div>
+
+            <!-- Durée prévue – من الفورم -->
+            <div class="mb-3">
+                <label class="form-label">Durée prévue (hh:mm:ss)</label>
+                {{ form.duree_prevue }}
+            </div>
+
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <a href="{% url 'liste_trajets' %}" class="btn btn-secondary">Annuler</a>
+        </form>
+    </div>
+
+    <!-- 🗺️ الخريطة على اليمين لكن خارج الفورم (نفس الصفحة) -->
+    <div class="col-md-7">
+        <div class="card p-3">
+            <h5>Carte du trajet</h5>
+            <p class="text-muted mb-2">
+                Le système trace l’itinéraire routier entre les deux villes et calcule
+                automatiquement la distance et la durée (vitesse 90 km/h).
+            </p>
+            <div id="map"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS (مسموح أن تكون هنا حتى لو أفضل في <head>) -->
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+
+<!-- Leaflet Routing Machine JS -->
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+<script>
+    // إحداثيات تقريبية لعواصم الولايات وبعض المدن الرئيسية في موريتانيا
+    const cityCoords = {
+        "Nouakchott":         {lat: 18.0735, lng: -15.9582},
+        "Nouadhibou":         {lat: 20.9025, lng: -17.0347},
+        "Rosso":              {lat: 16.5133, lng: -15.8053},
+        "Boghé":              {lat: 16.5900, lng: -14.2600},
+        "Aleg":               {lat: 17.0500, lng: -13.9100},
+        "Boutilimit":         {lat: 17.5500, lng: -14.6833},
+        "Kaédi":              {lat: 16.1500, lng: -13.5000},
+        "Sélibaby":           {lat: 15.1580, lng: -12.1840},
+        "Kiffa":              {lat: 16.6200, lng: -11.4000},
+        "Aïoun el Atrouss":   {lat: 16.6667, lng: -9.6167},
+        "Néma":               {lat: 16.6170, lng: -7.2570},
+        "Tidjikja":           {lat: 18.5560, lng: -11.4270},
+        "Atar":               {lat: 20.5169, lng: -13.0490},
+        "Akjoujt":            {lat: 19.7466, lng: -14.3853},
+        "Zouerate":           {lat: 22.7333, lng: -12.4667}
+    };
+
+    // إنشاء الخريطة في وسط موريتانيا تقريباً
+    let map = L.map('map').setView([18.0, -13.0], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    let routingControl = null;
+
+    function updateRoute() {
+        const departSelect  = document.getElementById("id_ville_depart");
+        const arriveeSelect = document.getElementById("id_ville_arrivee");
+
+        const departCity  = departSelect.value;
+        const arriveeCity = arriveeSelect.value;
+
+        if (!departCity || !arriveeCity ||
+            !cityCoords[departCity] || !cityCoords[arriveeCity]) {
+            return;
+        }
+
+        const dCoords = cityCoords[departCity];
+        const aCoords = cityCoords[arriveeCity];
+
+        const departLatLng  = L.latLng(dCoords.lat, dCoords.lng);
+        const arriveeLatLng = L.latLng(aCoords.lat, aCoords.lng);
+
+        if (routingControl) {
+            routingControl.setWaypoints([departLatLng, arriveeLatLng]);
+        } else {
+            routingControl = L.Routing.control({
+                waypoints: [departLatLng, arriveeLatLng],
+                draggableWaypoints: false,
+                addWaypoints: false,
+                routeWhileDragging: false,
+                show: false,
+                lineOptions: {
+                    addWaypoints: false
+                },
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1'
+                })
+            })
+            .on('routesfound', function(e) {
+                const route = e.routes[0];
+
+                // المسافة بالمتر → نحولها إلى كيلومتر
+                const distanceMeters = route.summary.totalDistance;
+                const distanceKm = distanceMeters / 1000.0;
+                const distanceRounded = distanceKm.toFixed(2);
+
+                const distanceField = document.getElementById("id_distance_km");
+                if (distanceField) {
+                    distanceField.value = distanceRounded;
+                }
+
+                // حساب المدة بسرعة 90 كم/ساعة
+                const speed = 90.0;  // km/h
+                const hours = distanceKm / speed;
+                const totalMinutes = Math.round(hours * 60);
+                const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+                const mm = String(totalMinutes % 60).padStart(2, '0');
+                const dureeStr = hh + ":" + mm + ":00";
+
+                const dureeField = document.getElementById("id_duree_prevue");
+                if (dureeField) {
+                    dureeField.value = dureeStr;
+                }
+            })
+            .addTo(map);
+        }
+
+        // تقريب الخريطة على المسار
+        const bounds = L.latLngBounds(departLatLng, arriveeLatLng);
+        map.fitBounds(bounds, {padding: [30, 30]});
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const departSelect  = document.getElementById("id_ville_depart");
+        const arriveeSelect = document.getElementById("id_ville_arrivee");
+
+        if (departSelect) {
+            departSelect.addEventListener("change", updateRoute);
+        }
+        if (arriveeSelect) {
+            arriveeSelect.addEventListener("change", updateRoute);
+        }
+
+        // إذا كنت في صفحة تعديل وكان عندك قيم محفوظة يمكن لاحقًا تطوير
+        // قراءة القيمة المبدئية من form.instance.ville_depart / ville_arrivee في الـ JS
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">📋 Mes Réservations</h2>
+    
+    {% if reservations %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Trajet</th>
+                        <th>Date & Heure</th>
+                        <th>Mode Paiement</th>
+                        <th>Statut</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for res in reservations %}
+                    <tr>
+                        <td>{{ res.id_reservation }}</td>
+                        <td>{{ res.voyage.trajet.ville_depart }} ➝ {{ res.voyage.trajet.ville_arrivee }}</td>
+                        <td>{{ res.voyage.date_depart }} | {{ res.voyage.heure_depart }}</td>
+                        
+                        <td>
+                            {% if res.mode_paiement == 'BANKILY' %}
+                                <span class="badge bg-danger">Bankily</span>
+                            {% elif res.mode_paiement == 'MASRVI' %}
+                                <span class="badge bg-primary">Masrvi</span>
+                            {% elif res.mode_paiement == 'CASH' %}
+                                <span class="badge bg-secondary">Espèces</span>
+                            {% else %}
+                                <span class="badge bg-dark">{{ res.mode_paiement }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if res.statut == 'payé' %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle"></i> Payé</span>
+                            {% elif res.statut == 'annulé' %}
+                                <span class="badge bg-danger">Annulé</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">En attente</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if res.statut == 'payé' %}
+                                <a href="#" class="btn btn-sm btn-outline-primary"><i class="fas fa-print"></i> Billet</a>
+                            {% else %}
+                                <small class="text-muted">En attente de validation</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+        <div class="alert alert-info">Vous n'avez aucune réservation pour le moment.</div>
+        <a href="{% url 'home_client' %}" class="btn btn-primary">Réserver un voyage</a>
+    {% endif %}
+</div>
+{% endblock %}

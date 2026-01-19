@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Créer un compte - SGT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, #0d6efd 0, #001f3f 45%, #020617 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .auth-card {
+            max-width: 1000px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: row;
+        }
+
+        /* الجزء الأيسر (الأزرق) */
+        .auth-illustration {
+            width: 40%;
+            background: linear-gradient(160deg, #0d6efd, #1e40af);
+            color: #fff;
+            padding: 3rem 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .auth-illustration h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .icon-badge {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* الجزء الأيمن (الفورم) */
+        .auth-form {
+            width: 60%;
+            padding: 2.5rem 3rem;
+            overflow-y: auto;
+            max-height: 90vh; /* في حال كانت الشاشة صغيرة */
+        }
+
+        .form-section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #0d6efd;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .form-section-title:first-of-type {
+            margin-top: 0;
+        }
+
+        .form-control {
+            padding: 0.7rem 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .input-group-text {
+            border-radius: 0.5rem 0 0 0.5rem;
+            background-color: #f8f9fa;
+        }
+
+        .text-danger ul {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 0;
+        }
+
+        /* تجاوب الشاشات الصغيرة */
+        @media (max-width: 992px) {
+            .auth-card {
+                flex-direction: column;
+                max-width: 500px;
+            }
+            .auth-illustration {
+                width: 100%;
+                padding: 2rem;
+                text-align: center;
+            }
+            .auth-illustration .icon-badge {
+                margin: 0 auto 1rem auto;
+            }
+            .auth-form {
+                width: 100%;
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+
+    <div class="auth-illustration">
+        <div>
+            <div class="icon-badge">
+                <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <h1>Bienvenue</h1>
+            <p class="opacity-75">
+                Rejoignez la plateforme SGT pour une gestion intelligente et centralisée de vos transports.
+            </p>
+        </div>
+        <div class="mt-4 small opacity-75">
+            <i class="fa-solid fa-shield-halved me-2"></i>
+            Votre compte sera soumis à une validation par l'administrateur avant activation.
+        </div>
+    </div>
+
+    <div class="auth-form">
+        <h3 class="mb-4 fw-bold text-dark">Créer un compte</h3>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="form-section-title">
+                <i class="fa-regular fa-id-card me-1"></i> Informations Personnelles
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small text-muted">Prénom *</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <div class="text-danger small mt-1">{{ form.first_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small text-muted">Nom *</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <div class="text-danger small mt-1">{{ form.last_name.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-section-title">
+                <i class="fa-solid fa-address-book me-1"></i> Coordonnées
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small text-muted">Téléphone *</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                        {{ form.telephone }}
+                    </div>
+                    {% if form.telephone.errors %}
+                        <div class="text-danger small mt-1">{{ form.telephone.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small text-muted">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-regular fa-envelope"></i></span>
+                        {{ form.email }}
+                    </div>
+                    {% if form.email.errors %}
+                        <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-section-title">
+                <i class="fa-solid fa-lock me-1"></i> Sécurité & Connexion
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small text-muted">Nom d'utilisateur (Identifiant de connexion) *</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-user-tag"></i></span>
+                    {{ form.username }}
+                </div>
+                {% if form.username.errors %}
+                    <div class="text-danger small mt-1">{{ form.username.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small text-muted">Mot de passe *</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-key"></i></span>
+                        {{ form.password }}
+                    </div>
+                    {% if form.password.errors %}
+                        <div class="text-danger small mt-1">{{ form.password.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small text-muted">Confirmation *</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-check-double"></i></span>
+                        {{ form.password_confirm }}
+                    </div>
+                    {% if form.password_confirm.errors %}
+                        <div class="text-danger small mt-1">{{ form.password_confirm.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                    Créer mon compte
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-4">
+            <span class="text-muted">Vous avez déjà un compte ?</span>
+            <a href="{% url 'login' %}" class="fw-bold text-decoration-none ms-1">Se connecter</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

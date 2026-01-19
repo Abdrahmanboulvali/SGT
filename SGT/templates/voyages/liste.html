@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Voyages - SGT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-bus-front"></i> Gestion des Voyages</h2>
+    <a href="{% url 'ajouter_voyage' %}" class="btn btn-primary shadow-sm">
+        <i class="bi bi-plus-lg"></i> Planifier un voyage
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <table class="table table-hover align-middle datatable">
+            <thead class="table-light">
+                <tr>
+                    <th>Date & État</th>
+                    <th>Heure</th>
+                    <th>Trajet</th>
+                    <th>Véhicule</th>
+                    <th>Chauffeur</th>
+                    <th>Prix / siège</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in voyage_data %}
+                    <tr {% if not item.is_open %}class="table-light text-muted"{% endif %}>
+                        <td>
+                            <div class="fw-bold text-dark">{{ item.obj.date_depart|date:"d M Y" }}</div>
+
+                            {% if item.is_open %}
+                                <span class="badge bg-success mt-1">Voyage ouvert</span>
+                                <div class="small text-success" style="font-size: 0.75rem;">
+                                    <i class="bi bi-check-circle"></i> {{ item.seats_left }} places disponibles
+                                </div>
+                            {% else %}
+                                <span class="badge bg-danger mt-1">Voyage fermé</span>
+                                <div class="small text-danger" style="font-size: 0.75rem;">
+                                    <i class="bi bi-x-circle"></i> Complet ou délai (<30min) dépassé
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ item.obj.heure_depart|time:"H:i" }}</td>
+                        <td>
+                            <span class="badge bg-info text-dark">
+                                {{ item.obj.trajet.ville_depart }} <i class="bi bi-arrow-right"></i> {{ item.obj.trajet.ville_arrivee }}
+                            </span>
+                        </td>
+                        <td>
+                            {{ item.obj.vehicule.matricule }}
+                            <br>
+                            <small class="text-muted">{{ item.obj.vehicule.type_vehicule }}</small>
+                        </td>
+
+                        <td>{{ item.obj.chauffeur.nom }} {{ item.obj.chauffeur.prenom }}</td>
+                        <td class="fw-bold text-primary">{{ item.obj.prix_par_siege }} MRU</td>
+
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a href="{% url 'modifier_voyage' item.obj.id_voyage %}"
+                                   class="btn btn-sm btn-outline-warning">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'supprimer_voyage' item.obj.id_voyage %}"
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Supprimer ce voyage ?');">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">Aucun voyage planifié.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

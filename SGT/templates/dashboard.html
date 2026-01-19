@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord - SGT{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Tableau de bord</h2>
+
+<!-- ✅ KPI الأساسية (كما هي) -->
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card text-bg-primary">
+            <div class="card-body">
+                <h6 class="card-title">Trajets</h6>
+                <p class="display-6">{{ trajets }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-success">
+            <div class="card-body">
+                <h6 class="card-title">Véhicules</h6>
+                <p class="display-6">{{ vehicules }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-warning">
+            <div class="card-body">
+                <h6 class="card-title">Chauffeurs</h6>
+                <p class="display-6">{{ chauffeurs }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-info">
+            <div class="card-body">
+                <h6 class="card-title">Voyages</h6>
+                <p class="display-6">{{ voyages }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-3">
+    <div class="col-md-3">
+        <div class="card text-bg-secondary">
+            <div class="card-body">
+                <h6 class="card-title">Réservations</h6>
+                <p class="display-6">{{ reservations }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ KPI إضافية -->
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Clients</div>
+                        <div class="h3 mb-0">{{ clients }}</div>
+                    </div>
+                    <i class="fa-solid fa-user-group fa-xl text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Réservations aujourd'hui</div>
+                        <div class="h3 mb-0">{{ reservations_today }}</div>
+                    </div>
+                    <i class="fa-solid fa-calendar-day fa-xl text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Chiffre d'affaires aujourd'hui</div>
+                        <div class="h3 mb-0">{{ revenue_today|floatformat:2 }} <span class="text-muted fs-6">MRU</span></div>
+                    </div>
+                    <i class="fa-solid fa-money-bill-trend-up fa-xl text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ مؤشرات تتغير مع الوقت -->
+<div class="row g-3 mt-3">
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Voyages aujourd'hui</div>
+                <div class="h3 mb-0">{{ voyages_today }}</div>
+            </div>
+        </div>
+    </div>
+
+<!--    <div class="col-lg-3">-->
+<!--        <div class="card border-0 shadow-sm">-->
+<!--            <div class="card-body">-->
+<!--                <div class="text-muted small">Voyages (7 jours prochains)</div>-->
+<!--                <div class="h3 mb-0">{{ voyages_next7 }}</div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    <div class="col-lg-3">-->
+<!--        <div class="card border-0 shadow-sm">-->
+<!--            <div class="card-body">-->
+<!--                <div class="text-muted small">CA (30 jours)</div>-->
+<!--                <div class="h3 mb-0">{{ revenue_30|floatformat:2 }} <span class="text-muted fs-6">MRU</span></div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    <div class="col-lg-3">-->
+<!--        <div class="card border-0 shadow-sm">-->
+<!--            <div class="card-body">-->
+<!--                <div class="text-muted small">Seats réservées (30 jours)</div>-->
+<!--                <div class="h3 mb-0">{{ seats_30|floatformat:0 }}</div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<div class="row g-3 mt-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Taux d'annulation (30 jours)</div>
+                        <div class="h3 mb-1">{{ taux_annulation_30|floatformat:1 }}%</div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar" role="progressbar" style="width: {{ taux_annulation_30|floatformat:0 }}%;"></div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-ban fa-xl text-danger"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small">Taux d'occupation (7 jours)</div>
+                        <div class="h3 mb-1">{{ taux_occupation_7|floatformat:1 }}%</div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar" role="progressbar" style="width: {{ taux_occupation_7|floatformat:0 }}%;"></div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-users fa-xl text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ الرسوم -->
+<div class="row g-3 mt-3">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-chart-column"></i>
+                    <strong>Réservations (7 derniers jours)</strong>
+                </div>
+                <span class="badge text-bg-light">Auto</span>
+            </div>
+            <div class="card-body">
+                <canvas id="chartReservations" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                    <strong>Chiffre d'affaires (MRU) - 7 jours</strong>
+                </div>
+                <span class="badge text-bg-light">Auto</span>
+            </div>
+            <div class="card-body">
+                <canvas id="chartRevenue" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ جداول احترافية -->
+<div class="row g-3 mt-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex align-items-center gap-2">
+                <i class="fa-solid fa-clock"></i>
+                <strong>Prochains voyages</strong>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Trajet</th>
+                                <th>Date</th>
+                                <th>Heure</th>
+                                <th>Reste</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in upcoming_voyages %}
+                                <tr>
+                                    <td>{{ v.trajet }}</td>
+                                    <td>{{ v.date }}</td>
+                                    <td>{{ v.heure }}</td>
+                                    <td>{{ v.remaining }}/{{ v.cap }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Aucun voyage à venir.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex align-items-center gap-2">
+                <i class="fa-solid fa-route"></i>
+                <strong>Top trajets (30 jours)</strong>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Trajet</th>
+                                <th>Réservations</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in top_trajets %}
+                                <tr>
+                                    <td>{{ t.voyage__trajet__ville_depart }} → {{ t.voyage__trajet__ville_arrivee }}</td>
+                                    <td>{{ t.nb }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-3">Aucune donnée.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ تمرير البيانات للـ JS بأمان -->
+{{ labels_7d|json_script:"labels7d" }}
+{{ reservations_7d|json_script:"res7d" }}
+{{ revenue_7d|json_script:"rev7d" }}
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+(function () {
+    const labels = JSON.parse(document.getElementById("labels7d").textContent);
+    const res7d  = JSON.parse(document.getElementById("res7d").textContent);
+    const rev7d  = JSON.parse(document.getElementById("rev7d").textContent);
+
+    const ctx1 = document.getElementById("chartReservations");
+    const ctx2 = document.getElementById("chartRevenue");
+
+    if (ctx1) {
+        new Chart(ctx1, {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Réservations",
+                    data: res7d
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    if (ctx2) {
+        new Chart(ctx2, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "MRU",
+                    data: rev7d,
+                    tension: 0.35
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => (ctx.parsed.y ?? 0) + " MRU"
+                        }
+                    }
+                },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}
+</div>

@@ -1,0 +1,42 @@
+name: transport_mobile
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  # التعديل هنا: تم تغيير 3.5.4 إلى 3.2.4 ليتوافق مع جهازك
+  sdk: '>=3.2.4 <4.0.0'
+
+dependencies:
+  dio: ^5.4.0
+  open_file: ^3.5.10
+  path_provider: ^2.1.2
+  open_filex: ^4.4.0
+  universal_html: ^2.2.4
+  data_table_2: 2.5.5
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+
+  # المكتبات المطلوبة لمشروعك (تأكد من وجود نسخة واحدة فقط من كل منها)
+  http: ^1.1.0
+  image_picker: ^1.1.2
+  file_picker: ^8.1.2
+  jwt_decoder: ^2.0.1
+  shared_preferences: ^2.5.3
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # إذا كان لديك صور أو أيقونات خاصة، أضفها هنا مستقبلاً
+  # assets:
+  #   - assets/images/

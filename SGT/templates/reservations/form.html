@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Réservation - SGT{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center mb-3">
+    <i class="bi bi-ticket-perforated fs-3 text-primary me-2"></i>
+    <h2 class="mb-0">
+        {% if form.instance.pk %}Modifier la réservation{% else %}Nouvelle réservation{% endif %}
+    </h2>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="card border-0 shadow-sm" id="reservation-form">
+    {% csrf_token %}
+
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <span>
+            {% if form.instance.pk %}
+                <i class="bi bi-pencil-square me-1"></i> Modification d'une réservation
+            {% else %}
+                <i class="bi bi-plus-circle me-1"></i> Création d'une nouvelle réservation
+            {% endif %}
+        </span>
+    </div>
+
+    <div class="card-body">
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger shadow-sm">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+
+        {% if user.role != 'CLIENT' %}
+            <div class="mb-3">
+                <label class="form-label fw-bold">{{ form.client.label }} :</label>
+                <div class="d-flex flex-column flex-md-row gap-2">
+                    {{ form.client }}
+                    <a href="{% url 'ajouter_client' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center" title="Ajouter un client">
+                        <i class="bi bi-person-plus"></i>
+                    </a>
+                </div>
+            </div>
+            <hr class="my-3">
+        {% endif %}
+
+        <div class="row">
+            <div class="{% if user.role == 'CLIENT' %}col-12{% else %}col-md-6{% endif %} mb-3">
+                <label class="form-label fw-bold">{{ form.voyage.label }} :</label>
+                {{ form.voyage }}
+                <div class="form-text">Choisissez votre voyage pour voir le tarif.</div>
+
+                <div id="price-summary" class="mt-3 p-3 rounded bg-light border border-primary d-none shadow-sm">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Prix par siège:</span>
+                        <span class="fw-bold"><span id="seat-price">0</span> MRU</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-top pt-2">
+                        <span class="text-dark fw-bold">Total à payer:</span>
+                        <span class="fs-4 fw-bold text-success"><span id="total-price">0</span> MRU</span>
+                    </div>
+                </div>
+            </div>
+
+            {% if user.role != 'CLIENT' %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">{{ form.statut.label }} :</label>
+                    {{ form.statut }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="row mt-2">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">{{ form.nb_sieges.label }} :</label>
+                {{ form.nb_sieges }}
+            </div>
+
+            {% if user.role == 'CLIENT' %}
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-primary">Capture d'écran du paiement :</label>
+                {{ form.preuve_paiement }}
+                <div class="form-text text-danger small">
+                    <i class="bi bi-camera-fill"></i> La capture (Bankily/Masrvi) doit être nette (Montant + ID).
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <hr class="my-4">
+
+        <div class="alert alert-info border-0 shadow-sm bg-opacity-10">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="bi bi-lightning-charge-fill text-warning fs-3"></i>
+                </div>
+                <div>
+                    <h5 class="alert-heading fw-bold text-dark">Validation Automatique par OCR</h5>
+                    <p class="mb-2">Pour une validation immédiate, envoyez le montant exact affiché ci-dessus au :</p>
+                    <div class="d-inline-block px-3 py-1 bg-white border rounded fw-bold fs-5 text-primary mb-2">
+                        37 61 48 81 <small class="text-muted">(SGT Transport)</small>
+                    </div>
+                    <p class="small text-muted mb-0">Le système validera votre ticket après l'analyse de l'ID de transaction.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-end gap-2 bg-white">
+        <a href="{% url 'liste_reservations' %}" class="btn btn-light px-4">Annuler</a>
+        <button type="submit" class="btn btn-primary px-5 fw-bold shadow">
+            <i class="bi bi-check-circle-fill me-2"></i> Confirmer la réservation
+        </button>
+    </div>
+</form>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const voyageSelect = document.querySelector('select[name="voyage"]');
+        const nbSiegesInput = document.querySelector('input[name="nb_sieges"]');
+        const priceSummary = document.getElementById('price-summary');
+        const seatPriceSpan = document.getElementById('seat-price');
+        const totalPriceSpan = document.getElementById('total-price');
+
+        function updatePrice() {
+            const voyageId = voyageSelect.value;
+            const nbSieges = parseInt(nbSiegesInput.value) || 1;
+
+            if (voyageId) {
+                fetch(`/api/voyage-price/${voyageId}/`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('API Error');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const price = parseFloat(data.prix);
+                        seatPriceSpan.innerText = price.toLocaleString();
+                        totalPriceSpan.innerText = (price * nbSieges).toLocaleString();
+                        priceSummary.classList.remove('d-none');
+
+                        totalPriceSpan.parentElement.classList.add('animate-pulse');
+                        setTimeout(() => totalPriceSpan.parentElement.classList.remove('animate-pulse'), 500);
+                    })
+                    .catch(error => console.error('Error fetching price:', error));
+            } else {
+                priceSummary.classList.add('d-none');
+            }
+        }
+
+        voyageSelect.addEventListener('change', updatePrice);
+        nbSiegesInput.addEventListener('input', updatePrice);
+
+        if(voyageSelect.value) updatePrice();
+    });
+</script>
+
+<style>
+    .animate-pulse {
+        animation: pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1);
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: .7; transform: scale(1.05); }
+    }
+    #id_preuve_paiement {
+        display: block;
+        width: 100%;
+        padding: .375rem .75rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        appearance: none;
+        border-radius: .375rem;
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    }
+</style>
+
+{% endblock %}

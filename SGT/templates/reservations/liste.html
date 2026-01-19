@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Réservations - SGT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">
+        <i class="bi bi-bookmark-check-fill text-primary"></i> Gestion des Réservations
+    </h2>
+    <a href="{% url 'ajouter_reservation' %}" class="btn btn-primary shadow-sm">
+        <i class="bi bi-plus-lg"></i> Nouvelle réservation
+    </a>
+</div>
+
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle datatable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Client</th>
+                        <th>Trajet & Voyage</th>
+                        <th>Départ</th>
+                        <th class="text-center">Sièges</th>
+                        <th>Statut Paiement</th>
+                        <th>Date Réservation</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in reservations %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ r.client.username }}</td>
+                            <td>
+                                <span class="badge bg-info text-dark">{{ r.voyage.trajet.ville_depart }} → {{ r.voyage.trajet.ville_arrivee }}</span>
+                                <br><small class="text-muted">ID: #{{ r.voyage.id_voyage }}</small>
+                            </td>
+                            <td>
+                                <div>{{ r.voyage.date_depart|date:"d/m/Y" }}</div>
+                                <small class="text-muted"><i class="bi bi-clock"></i> {{ r.voyage.heure_depart }}</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-secondary">{{ r.nb_sieges }}</span>
+                            </td>
+                            <td>
+                                {% if r.statut_paiement == 'paye' %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Payé</span>
+                                {% elif r.statut_paiement == 'en_attente' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> En attente</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Échoué</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ r.date_reservation|date:"d/m/Y H:i" }}</td>
+                            <td class="text-end">
+                                <div class="btn-group shadow-sm">
+                                    {% if r.statut_paiement == 'paye' %}
+                                        <a href="{% url 'ticket_reservation' r.id_reservation %}" class="btn btn-sm btn-outline-primary" title="Imprimer le ticket">
+                                            <i class="bi bi-printer"></i> Ticket
+                                        </a>
+                                    {% endif %}
+                                    <a href="{% url 'modifier_reservation' r.id_reservation %}" class="btn btn-sm btn-outline-warning" title="Modifier">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'supprimer_reservation' r.id_reservation %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       onclick="return confirm('Annuler cette réservation ?');" title="Annuler">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                Aucune réservation trouvée.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

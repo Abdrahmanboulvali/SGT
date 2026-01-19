@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Voyage - SGT{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9 col-xl-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white d-flex align-items-center">
+                <i class="fa-solid fa-ticket me-2"></i>
+                <h5 class="mb-0">
+                    {% if form.instance.pk %}Modifier le voyage{% else %}Planifier un nouveau voyage{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Trajet <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-route"></i></span>
+                                {{ form.trajet }}
+                            </div>
+                            <div class="text-danger small mt-1">{{ form.trajet.errors }}</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Véhicule <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-bus"></i></span>
+                                {{ form.vehicule }}
+                            </div>
+                            <div class="text-danger small mt-1">{{ form.vehicule.errors }}</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Chauffeur <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-id-badge"></i></span>
+                                {{ form.chauffeur }}
+                            </div>
+                            <div class="text-danger small mt-1">{{ form.chauffeur.errors }}</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Prix par siège <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-solid fa-money-bill-wave"></i></span>
+                                {{ form.prix_par_siege }}
+                                <span class="input-group-text">MRU</span>
+                            </div>
+                            <div class="text-danger small mt-1">{{ form.prix_par_siege.errors }}</div>
+                            <div class="form-text text-primary fw-bold">
+                                Calculé automatiquement : 1,5 MRU/Km (Modifiable)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Date de départ <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-regular fa-calendar-days"></i></span>
+                                {{ form.date_depart }}
+                            </div>
+                            <div class="text-danger small mt-1">{{ form.date_depart.errors }}</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Heure de départ <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fa-regular fa-clock"></i></span>
+                                {{ form.heure_depart }}
+                            </div>
+                            <div class="text-danger small mt-1">{{ form.heure_depart.errors }}</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <a href="{% url 'liste_voyages' %}" class="btn btn-outline-secondary me-2">
+                            <i class="fa-solid fa-xmark me-1"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>
+                            {% if form.instance.pk %}Mettre à jour{% else %}Enregistrer{% endif %}
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const trajetSelect = document.getElementById("id_trajet");
+    const prixInput = document.getElementById("id_prix_par_siege");
+
+    // إضافة كلاس Bootstrap تلقائيًا
+    document.querySelectorAll('input, select').forEach(field => {
+        if (!field.classList.contains('form-control') && !field.classList.contains('form-select')) {
+            field.classList.add(field.tagName === 'SELECT' ? 'form-select' : 'form-control');
+        }
+    });
+
+    // ✅ التعرفة: 1.5 MRU لكل كيلومتر
+    const TARIF_KM = 1.5;
+
+    // تقريب لرقم واحد بعد الفاصلة
+    function round1(n) {
+        return Math.round(n * 10) / 10;
+    }
+
+    async function updatePrixAuto(forceUpdate = false) {
+        if (!trajetSelect || !prixInput) return;
+
+        const idTrajet = trajetSelect.value;
+        if (!idTrajet) return;
+
+        // إذا المستخدم كتب سعرًا يدويًا لا نغيّره إلا عند forceUpdate
+        if (!forceUpdate && prixInput.value !== "" && parseFloat(prixInput.value) > 0) {
+            return;
+        }
+
+        try {
+            // ✅ بناء رابط آمن من Django
+            const url = "{% url 'api_trajet_info' 999999 %}".replace("999999", idTrajet);
+
+            const resp = await fetch(url, {
+                headers: {"X-Requested-With": "XMLHttpRequest"}
+            });
+
+            if (!resp.ok) {
+                console.error("API error:", resp.status, url);
+                return;
+            }
+
+            const data = await resp.json();
+            const distanceKm = Number(data.distance_km || 0);
+
+            const newPrix = round1(distanceKm * TARIF_KM);
+
+            // تحديث الحقل بالقيمة الجديدة
+            prixInput.value = newPrix;
+
+            // تأثير بسيط للإشارة للتحديث
+            prixInput.classList.add('border-primary');
+            setTimeout(() => prixInput.classList.remove('border-primary'), 800);
+
+        } catch (e) {
+            console.error("Erreur calcul prix:", e);
+        }
+    }
+
+    if (trajetSelect) {
+        trajetSelect.addEventListener("change", function() {
+            updatePrixAuto(true);
+        });
+
+        // عند أول فتح الصفحة: إذا السعر فارغ أو 0 احسبه
+        if (!prixInput.value || prixInput.value === "0") {
+            updatePrixAuto(true);
+        }
+    }
+});
+</script>
+{% endblock %}
