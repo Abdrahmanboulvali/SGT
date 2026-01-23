@@ -13,28 +13,28 @@
     .ticket-border {
         border-left: 5px dashed #0d6efd;
     }
-    .qr-placeholder {
-        width: 120px;
-        height: 120px;
-        background: #f8f9fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #eee;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-4 no-print">
         <a href="{% url 'liste_reservations' %}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Retour
         </a>
-        <button onclick="window.print()" class="btn btn-primary">
-            <i class="bi bi-printer"></i> Imprimer le Ticket
-        </button>
+
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="bi bi-printer"></i> Imprimer le Ticket
+            </button>
+
+            {% if reservation.statut_paiement == "paye" and reservation.statut == "confirmé" %}
+            <a class="btn btn-success" href="{% url 'api_mobile_ticket_pdf' reservation.id_reservation %}">
+                <i class="bi bi-download"></i> Télécharger PDF
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="card shadow-sm border-0 overflow-hidden">
@@ -42,14 +42,17 @@
             <h4 class="mb-0">TICKET DE VOYAGE - SGT</h4>
             <small>Société de Gestion de Transport</small>
         </div>
-        
+
         <div class="card-body p-4 ticket-border">
             <div class="row">
                 <div class="col-md-8">
+
                     <div class="row mb-4">
                         <div class="col-6">
                             <label class="text-muted small uppercase">Référence</label>
-                            <p class="fw-bold fs-5 text-primary">#{{ reservation.id_reservation }}{{ reservation.date_reservation|date:"Ymd" }}</p>
+                            <p class="fw-bold fs-5 text-primary">
+                                #{{ reservation.id_reservation }}{{ reservation.date_reservation|date:"Ymd" }}
+                            </p>
                         </div>
                         <div class="col-6 text-end">
                             <label class="text-muted small">Date d'émission</label>
@@ -59,7 +62,10 @@
 
                     <div class="row mb-4">
                         <div class="col-12">
-                            <h5 class="border-bottom pb-2 mb-3"><i class="bi bi-geo-alt-fill text-danger"></i> Itinéraire</h5>
+                            <h5 class="border-bottom pb-2 mb-3">
+                                <i class="bi bi-geo-alt-fill text-danger"></i> Itinéraire
+                            </h5>
+
                             <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded">
                                 <div class="text-center">
                                     <span class="d-block text-muted small">Départ</span>
@@ -85,16 +91,27 @@
                         </div>
                         <div class="col-3">
                             <label class="text-muted small">Prix Total</label>
-                            <strong>{{ reservation.montant_total|floatformat:2 }} MRU</strong>
+                            <strong>{{ montant_total|floatformat:2 }} MRU</strong>
                         </div>
                     </div>
+
                 </div>
 
                 <div class="col-md-4 text-center border-start d-flex flex-column align-items-center justify-content-center">
                     <div id="qrcode" class="mb-3"></div>
-                    <div class="badge bg-success fs-6 mb-2">PAIEMENT CONFIRMÉ</div>
-                    <p class="text-muted small">Transaction ID:<br><strong>{{ reservation.transaction_id|default:"Vérifié" }}</strong></p>
+
+                    {% if reservation.statut_paiement == "paye" and reservation.statut == "confirmé" %}
+                        <div class="badge bg-success fs-6 mb-2">PAIEMENT CONFIRMÉ</div>
+                    {% else %}
+                        <div class="badge bg-warning text-dark fs-6 mb-2">EN ATTENTE</div>
+                    {% endif %}
+
+                    <p class="text-muted small">
+                        Transaction ID:<br>
+                        <strong>{{ reservation.transaction_id|default:"-" }}</strong>
+                    </p>
                 </div>
+
             </div>
         </div>
 
@@ -109,12 +126,11 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-    // توليد كود يحتوي على بيانات الرحلة للتحقق السريع
     var qrData = "Ticket ID: {{ reservation.id_reservation }}\n" +
                  "Voyage: {{ reservation.voyage.trajet }}\n" +
                  "Passager: {{ reservation.client.username }}\n" +
                  "Sièges: {{ reservation.nb_sieges }}";
-    
+
     new QRCode(document.getElementById("qrcode"), {
         text: qrData,
         width: 128,

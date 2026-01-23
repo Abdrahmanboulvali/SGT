@@ -186,3 +186,255 @@ class ReservationForm(forms.ModelForm):
         ).order_by('date_depart', 'heure_depart')
         self.fields['client'].empty_label = "Sélectionnez un client..."
         self.fields['voyage'].empty_label = "Sélectionnez un voyage..."
+
+from django import forms
+from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
+
+from .models import Reservation, Voyage
+
+
+import re
+from datetime import datetime, timedelta
+
+from django import forms
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
+from .models import Reservation, Voyage
+
+
+def _to_int(x):
+    try:
+        if x is None:
+            return None
+        return int(float(str(x).strip()))
+    except Exception:
+        return None
+
+
+def _extract_places_from_string(s: str):
+    """
+    يقرأ Places dispo: 13 من نص __str__()
+    """
+    if not s:
+        return None
+    m = re.search(r"Places\s*dispo\s*:\s*(\d+)", s, re.IGNORECASE)
+    if m:
+        return _to_int(m.group(1))
+    return None
+
+
+def _get_places_dispo(v):
+    """
+    يرجع عدد المقاعد المتاحة مهما كان اسم الحقل أو طريقة الحساب.
+    """
+    possible_attrs = [
+        "places_dispo", "place_dispo",
+        "places_disponibles", "places_restantes",
+        "nb_places_dispo", "nb_places_restantes",
+    ]
+    for attr in possible_attrs:
+        val = getattr(v, attr, None)
+        val_int = _to_int(val)
+        if val_int is not None:
+            return val_int
+
+    possible_methods = [
+        "get_places_dispo", "get_places_disponibles",
+        "places_disponibles", "places_restantes",
+    ]
+    for m in possible_methods:
+        fn = getattr(v, m, None)
+        if callable(fn):
+            try:
+                val_int = _to_int(fn())
+                if val_int is not None:
+                    return val_int
+            except Exception:
+                pass
+
+    return _extract_places_from_string(str(v))
+
+
+def _get_departure_dt(v):
+    """
+    دمج date_depart + heure_depart
+    """
+    if not getattr(v, "date_depart", None) or not getattr(v, "heure_depart", None):
+        return None
+    try:
+        dt = datetime.combine(v.date_depart, v.heure_depart)
+        # إذا كانت timezone مفعلّة
+        if timezone.is_aware(timezone.now()):
+            return timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+        return dt
+    except Exception:
+        return None
+
+
+from django import forms
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from django.db.models import Sum
+from datetime import datetime, timedelta
+
+from .models import Reservation, Voyage
+
+User = get_user_model()
+
+
+from django import forms
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
+from datetime import timedelta
+
+from .models import Reservation, Voyage
+
+User = get_user_model()
+
+
+class ReservationWebForm(forms.ModelForm):
+
+    client_mode = forms.ChoiceField(
+        choices=[
+            ("existing", "Client existant"),
+            ("other", "Autre (nouveau client)"),
+        ],
+        initial="existing",
+        required=True,
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+
+    autre_nom = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Nom du client"
+        })
+    )
+
+    autre_tel = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Téléphone"
+        })
+    )
+
+    mode_paiement = forms.ChoiceField(
+        choices=[
+            ("cash", "Espèces (Cash)"),
+            ("bankily", "Bankily"),
+            ("masrvi", "Masrvi"),
+        ],
+        required=True,
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+
+    class Meta:
+        model = Reservation
+        fields = [
+            "client_mode",
+            "client",
+            "autre_nom",
+            "autre_tel",
+            "voyage",
+            "nb_sieges",
+            "mode_paiement",
+        ]
+        widgets = {
+            "client": forms.Select(attrs={"class": "form-select js-client-select"}),
+            "voyage": forms.Select(attrs={"class": "form-select"}),
+            "nb_sieges": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # ✅ Clients (فقط الزبناء، بدون superuser)
+        self.fields["client"].queryset = User.objects.filter(is_superuser=False).order_by("username")
+        self.fields["client"].required = False
+        self.fields["client"].empty_label = "— Sélectionner un client —"
+
+        # ✅ شكل label: رقم - اسم
+        def client_label(u):
+            fn = (u.first_name or "").strip()
+            ln = (u.last_name or "").strip()
+            name = (fn + " " + ln).strip()
+            return f"{u.username} - {name}" if name else f"{u.username}"
+
+        self.fields["client"].label_from_instance = client_label
+
+        # ✅ Voyages: فقط الرحلات المفتوحة (حسب check_statut + المقاعد)
+        self.fields["voyage"].empty_label = "— Sélectionner un voyage —"
+        self.fields["voyage"].queryset = self.get_open_voyages()
+
+    def get_open_voyages(self):
+        """
+        ✅ يعرض فقط الرحلات المفتوحة:
+        - ليست مغلقة بالوقت (<30 دقيقة)
+        - ليست ممتلئة (sieges_disponibles > 0)
+        """
+        qs = Voyage.objects.select_related("vehicule", "trajet").order_by("date_depart", "heure_depart")
+
+        allowed = []
+        for v in qs:
+            # ✅ إذا عندك check_statut (كما أرسلت في model)
+            if hasattr(v, "check_statut"):
+                if v.check_statut != "OUVERT":
+                    continue
+
+            # ✅ شرط المقاعد
+            if hasattr(v, "sieges_disponibles"):
+                if int(v.sieges_disponibles) <= 0:
+                    continue
+
+            allowed.append(v.pk)
+
+        return qs.filter(pk__in=allowed)
+
+    def clean(self):
+        cleaned = super().clean()
+
+        mode = (cleaned.get("client_mode") or "").strip().lower()
+        client = cleaned.get("client")
+        autre_nom = (cleaned.get("autre_nom") or "").strip()
+        autre_tel = (cleaned.get("autre_tel") or "").strip()
+
+        voyage = cleaned.get("voyage")
+        nb = cleaned.get("nb_sieges") or 1
+
+        # ✅ Validation client
+        if mode == "existing":
+            if not client:
+                self.add_error("client", "Veuillez sélectionner un client.")
+        else:
+            # ✅ Autre => الاسم والهاتف إجباريان
+            if not autre_nom:
+                self.add_error("autre_nom", "Nom du client obligatoire.")
+            if not autre_tel:
+                self.add_error("autre_tel", "Téléphone obligatoire.")
+
+            # ✅ مهم جدًا: لا نجبر client في وضع Autre
+            cleaned["client"] = None
+
+        # ✅ Validation voyage (لازم يكون مفتوح + فيه مقاعد)
+        if voyage:
+            # مغلق بالوقت أو ممتلئ
+            if hasattr(voyage, "check_statut") and voyage.check_statut != "OUVERT":
+                raise ValidationError("Ce voyage est fermé (complet ou délai < 30min).")
+
+            if hasattr(voyage, "sieges_disponibles"):
+                dispo = int(voyage.sieges_disponibles)
+                if dispo <= 0:
+                    self.add_error("voyage", "Voyage complet. Places restantes: 0")
+                elif int(nb) > dispo:
+                    self.add_error("nb_sieges", f"Il reste seulement {dispo} places disponibles.")
+
+        return cleaned
+

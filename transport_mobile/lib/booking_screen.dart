@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -29,7 +28,7 @@ class _BookingScreenState extends State<BookingScreen> {
   int seats = 1;
 
   XFile? pickedImage;
-  Uint8List? imageBytes; // عرض على الويب/الكمبيوتر
+  Uint8List? imageBytes;
 
   @override
   void initState() {
@@ -60,8 +59,6 @@ class _BookingScreenState extends State<BookingScreen> {
           voyages = list;
           selectedVoyageId = firstId;
           loadingVoyages = false;
-
-          // ✅ ضبط المقاعد حسب المتاح
           _clampSeatsToAvailable();
         });
       } else {
@@ -85,7 +82,6 @@ class _BookingScreenState extends State<BookingScreen> {
     for (final v in voyages) {
       final id = v["id"] ?? v["id_voyage"];
       if (id == selectedVoyageId) return v;
-      // في حال كان id في JSON نص
       if (id != null && id.toString() == selectedVoyageId.toString()) return v;
     }
     return null;
@@ -111,24 +107,21 @@ class _BookingScreenState extends State<BookingScreen> {
   void _clampSeatsToAvailable() {
     final left = _seatsLeft();
     if (left <= 0) {
-      // إذا لم يرسل السيرفر seats_left أو كانت 0، لا نكسر التطبيق
       if (seats < 1) seats = 1;
       return;
     }
     if (seats > left) {
-      seats = left; // اجعلها تساوي المتاح
+      seats = left;
       if (seats < 1) seats = 1;
     }
   }
 
   String _voyageLabel(Map<String, dynamic> v) {
-    // ✅ الأفضل: label جاهزة من السيرفر
     final label = v["label"];
     if (label != null && label.toString().trim().isNotEmpty) {
       return label.toString();
     }
 
-    // fallback: نكوّنها هنا
     final depart = (v["depart"] ?? "").toString();
     final arrivee = (v["arrivee"] ?? "").toString();
     final trajet = (v["trajet"] ?? v["route"] ?? "Trajet").toString();
@@ -188,15 +181,12 @@ class _BookingScreenState extends State<BookingScreen> {
       return;
     }
 
-    // ✅ منع إرسال عدد مقاعد أكبر من المتاح (إذا السيرفر يرسله)
     final left = _seatsLeft();
     if (left > 0 && seats > left) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Places insuffisantes. Disponible: $left")),
       );
-      setState(() {
-        seats = left;
-      });
+      setState(() => seats = left);
       return;
     }
 
@@ -213,10 +203,6 @@ class _BookingScreenState extends State<BookingScreen> {
       final url = Uri.parse("${ApiConfig.baseUrl}/api/mobile/reservations/");
       final req = http.MultipartRequest("POST", url);
 
-      // ⚠️ انتبه: أسماؤك هنا يجب أن تطابق Django
-      // عندك في Django: client_id / voyage_id / nb_sieges / preuve_paiement
-      // بينما هنا كانت user_id / sieges / expected_amount / image
-      // سأجعلها ترسل "الاثنين" لتعمل في كل الحالات بدون أن نكسر شيئًا.
       req.fields["user_id"] = widget.userId.toString();
       req.fields["client_id"] = widget.userId.toString();
 
@@ -224,18 +210,11 @@ class _BookingScreenState extends State<BookingScreen> {
       req.fields["nb_sieges"] = seats.toString();
       req.fields["sieges"] = seats.toString();
 
+      // ملاحظة: هذا فقط للمعلومة، السيرفر لا يعتمد عليه للتحقق
       req.fields["expected_amount"] = _totalToPay().toStringAsFixed(1);
 
       final bytes = await pickedImage!.readAsBytes();
 
-      // نرسل الملف باسمين كذلك (image + preuve_paiement) لأقصى توافق
-      req.files.add(
-        http.MultipartFile.fromBytes(
-          "image",
-          bytes,
-          filename: pickedImage!.name,
-        ),
-      );
       req.files.add(
         http.MultipartFile.fromBytes(
           "preuve_paiement",
@@ -248,17 +227,18 @@ class _BookingScreenState extends State<BookingScreen> {
       final body = await streamed.stream.bytesToString();
 
       if (streamed.statusCode == 200 || streamed.statusCode == 201) {
-        final lower = body.toLowerCase();
-        final ok = lower.contains("success") ||
-            lower.contains("true") ||
-            lower.contains("confirm") ||
-            lower.contains("paye") ||
-            lower.contains("payé");
-
         if (!mounted) return;
+
+        // ✅ لا يوجد “تحقق تلقائي”
+        // ✅ فقط نخبر الزبون أن الحجز قُدّم وينتظر موافقة المدير
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ok ? "Paiement reconnu ✅" : "Paiement non reconnu ❌")),
+          const SnackBar(
+            content: Text("Réservation envoyée ✅ En attente de validation par le gestionnaire."),
+          ),
         );
+
+        // (اختياري) يمكنك هنا تحويله مباشرة لصفحة "Mes réservations"
+        // Navigator.pushReplacement(...);
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -289,10 +269,9 @@ class _BookingScreenState extends State<BookingScreen> {
             children: [
               const SectionTitle(
                 "Réservation",
-                subtitle: "Choisissez un voyage et confirmez votre paiement",
+                subtitle: "Choisissez un voyage et envoyez votre preuve de paiement",
               ),
 
-              // Voyage dropdown
               loadingVoyages
                   ? const Padding(
                       padding: EdgeInsets.symmetric(vertical: 14),
@@ -305,12 +284,10 @@ class _BookingScreenState extends State<BookingScreen> {
                         final idRaw = (e["id"] ?? e["id_voyage"]);
                         final id = (idRaw is int) ? idRaw : int.parse(idRaw.toString());
 
-                        final label = _voyageLabel(e);
-
                         return DropdownMenuItem<int>(
                           value: id,
                           child: Text(
-                            label,
+                            _voyageLabel(e),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -319,8 +296,6 @@ class _BookingScreenState extends State<BookingScreen> {
                       onChanged: (val) {
                         setState(() {
                           selectedVoyageId = val;
-
-                          // ✅ عند تغيير الرحلة: اضبط المقاعد داخل المتاح
                           _clampSeatsToAvailable();
                         });
                       },
@@ -332,7 +307,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
               const SizedBox(height: 10),
 
-              // ✅ عرض المقاعد المتاحة تحت القائمة (إذا موجودة)
               if (!loadingVoyages && left > 0)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
@@ -347,7 +321,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
               const SizedBox(height: 12),
 
-              // Seats selector (min 1)
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -360,19 +333,10 @@ class _BookingScreenState extends State<BookingScreen> {
                     const Icon(Icons.event_seat_outlined),
                     const SizedBox(width: 10),
                     const Expanded(
-                      child: Text(
-                        "Nombre de sièges",
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
+                      child: Text("Nombre de sièges", style: TextStyle(fontWeight: FontWeight.w800)),
                     ),
                     IconButton(
-                      onPressed: seats > 1
-                          ? () {
-                              setState(() {
-                                seats--;
-                              });
-                            }
-                          : null,
+                      onPressed: seats > 1 ? () => setState(() => seats--) : null,
                       icon: const Icon(Icons.remove_circle_outline),
                     ),
                     SizedBox(
@@ -387,7 +351,6 @@ class _BookingScreenState extends State<BookingScreen> {
                     IconButton(
                       onPressed: () {
                         setState(() {
-                          // ✅ لا تتجاوز المقاعد المتاحة إذا موجودة
                           if (left > 0 && seats >= left) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text("Maximum disponible: $left")),
@@ -415,7 +378,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
               const SizedBox(height: 14),
 
-              // Image picker block
               InkWell(
                 onTap: _pickImage,
                 borderRadius: BorderRadius.circular(18),
@@ -466,8 +428,8 @@ class _BookingScreenState extends State<BookingScreen> {
               const SizedBox(height: 14),
 
               PrimaryButton(
-                text: "Confirmer et vérifier",
-                icon: Icons.verified_outlined,
+                text: "Confirmer la réservation",
+                icon: Icons.send_outlined,
                 loading: submitting,
                 onPressed: _submit,
               ),

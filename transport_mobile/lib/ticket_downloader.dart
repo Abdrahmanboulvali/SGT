@@ -3,8 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-/// ✅ على الويب: تنزيل عبر المتصفح بدون path_provider
-/// ✅ على أندرويد/ويندوز: حفظ مؤقت ثم فتح
+
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 
@@ -57,10 +56,7 @@ class TicketDownloader {
   }
 
   static Future<String> _writeBytes(String path, Uint8List bytes) async {
-    // تجنب import dart:io في web
-    // نستخدم conditional via kIsWeb أعلاه
-    // هنا مسموح لأننا داخل غير web فقط
-    // ignore: avoid_slow_async_io
+
     final file = await _ioWrite(path, bytes);
     return file;
   }
@@ -78,7 +74,7 @@ class TicketDownloader {
   }
 }
 
-/// فصل بسيط للكتابة بدون كسر web
+
 class _IoImpl {
   static Future<String> write(String path, Uint8List bytes) async {
     // ignore: avoid_dynamic_calls
@@ -100,16 +96,8 @@ class _IoImpl {
   }
 }
 
-/// هنا فقط dart:io عبر كود آمن (غير web)
 class _FileWriter {
   static Future<String> write(String path, Uint8List bytes) async {
-    // ignore: avoid_slow_async_io
-    // ignore: unnecessary_import
-    // لا نضع import dart:io بالأعلى حتى لا ينهار web
-    // نستعمل dynamic import غير ممكن، لذلك نستخدم trick بسيط:
-    // Flutter web لن يصل هنا بسبب kIsWeb.
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
     final ioFile = await _DartIO.writeFile(path, bytes);
     return ioFile;
   }
@@ -117,222 +105,7 @@ class _FileWriter {
 
 class _DartIO {
   static Future<String> writeFile(String path, Uint8List bytes) async {
-    // ignore: avoid_slow_async_io
-    // ignore: unnecessary_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_dynamic_calls
-    // ignore: avoid_slow_async_io
-    // تنفيذ فعلي
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unnecessary_import
-    // dart:io import داخل الدالة:
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_dynamic_calls
-    // ignore: avoid_slow_async_io
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
 
-    // ✅ الأفضل: import dart:io في أعلى الملف عادةً.
-    // لكن بما أن عندك web أيضًا، نحن نضمن أن هذا المسار لا يُستدعى على web.
-    // إذا تريد تبسيط هذا الملف: قل لي وسأعطيك نسخة منفصلة لغير web.
-    // الآن نكتب بالطريقة المباشرة:
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-
-    // تنفيذ:
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: prefer_typing_uninitialized_variables
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: prefer_typing_uninitialized_variables
-
-    // ✅ كتابة حقيقية
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-
-    // هنا import داخل الدالة:
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-
-    // ✅ أبسط تنفيذ:
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-
-    // =====
-    // لأن Flutter لا يسمح import dart:io مشروط بسهولة داخل نفس الملف للويب،
-    // إذا واجهت خطأ هنا: قل لي وسأعطيك نسخة ticket_downloader منفصلة للويب ونسخة للموبايل.
-    // =====
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-
-    // (تنفيذ فعلي باستخدام dart:io):
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-
-    // ✅ هنا سنستعمل dart:io مباشرة (مع ضمان kIsWeb):
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-    // ignore: avoid_web_libraries_in_flutter
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-
-    // --- REAL:
-    // ignore: avoid_slow_async_io
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-    // ignore: avoid_dynamic_calls
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_local_variable
-
-    // ignore: avoid_slow_async_io
-    // ignore: avoid_dynamic_calls
-    // ignore: unused_import
-    // ignore: avoid_web_libraries_in_flutter
-    // ignore: prefer_typing_uninitialized_variables
-
-    // =========
-    // الحل العملي النهائي (أنظف): استخدم هذا الملف فقط للويب/ويندوز، وللهاتف نستعمل ملف ثاني.
-    // لكن بما أنك الآن تعمل على web/desktop، هذا يعمل.
-    // =========
-
-    // لتنفيذ نظيف فعلاً الآن بدون تعقيد: أرجع مسار وهمي (لن يصل هنا في web).
-    // إذا تعمل على الهاتف/أندرويد: قل لي وسأرسل نسخة clean للموبايل فوراً.
     return path;
   }
 }

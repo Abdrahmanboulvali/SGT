@@ -63,6 +63,15 @@ class User(AbstractUser):
         managed = True
 
 
+from decimal import Decimal
+from datetime import datetime, timedelta
+
+from django.db import models
+from django.utils import timezone
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
+
+
 class Voyage(models.Model):
     id_voyage = models.AutoField(primary_key=True, db_column='id_voyage')
     date_depart = models.DateField(db_column='date_depart')
@@ -75,18 +84,45 @@ class Voyage(models.Model):
         db_column='prix_par_siege'
     )
 
-    trajet = models.ForeignKey(Trajet, on_delete=models.CASCADE, db_column='id_trajet', related_name='voyages')
-    vehicule = models.ForeignKey(Vehicule, on_delete=models.CASCADE, db_column='id_vehicule', related_name='voyages')
-    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE, db_column='id_chauffeur', related_name='voyages')
+    trajet = models.ForeignKey(
+        "Trajet",
+        on_delete=models.CASCADE,
+        db_column='id_trajet',
+        related_name='voyages'
+    )
+    vehicule = models.ForeignKey(
+        "Vehicule",
+        on_delete=models.CASCADE,
+        db_column='id_vehicule',
+        related_name='voyages'
+    )
+    chauffeur = models.ForeignKey(
+        "Chauffeur",
+        on_delete=models.CASCADE,
+        db_column='id_chauffeur',
+        related_name='voyages'
+    )
 
     class Meta:
         db_table = 'voyage'
         managed = True
 
+    # ✅✅✅ دمج تاريخ + وقت الرحلة (مفيد للفورم والـ list)
+    @property
+    def depart_datetime(self):
+        tz = timezone.get_current_timezone()
+        return timezone.make_aware(datetime.combine(self.date_depart, self.heure_depart), tz)
+
     @property
     def check_statut(self):
+        """
+        ✅ الرحلة تُغلق في حالتين:
+        1) بقي 30 دقيقة أو أقل
+        2) ممتلئة (المقاعد المحجوزة >= سعة المركبة)
+        """
         now = timezone.localtime()
-        dt_depart = timezone.make_aware(datetime.combine(self.date_depart, self.heure_depart))
+        dt_depart = self.depart_datetime
+
         if dt_depart <= (now + timedelta(minutes=30)):
             return "FERMÉ_TEMPS"
 
@@ -96,9 +132,10 @@ class Voyage(models.Model):
 
         if total_res >= self.vehicule.capacite:
             return "FERMÉ_COMPLET"
+
         return "OUVERT"
 
-    # ✅✅✅ الجديد: المقاعد المحجوزة والمتاحة
+    # ✅✅✅ المقاعد المحجوزة والمتاحة (كما عندك)
     @property
     def sieges_reserves(self) -> int:
         total = self.reservations.exclude(statut='annulé').aggregate(
@@ -110,8 +147,21 @@ class Voyage(models.Model):
     def sieges_disponibles(self) -> int:
         return max(int(self.vehicule.capacite) - self.sieges_reserves, 0)
 
+    # ✅✅✅ (جديد) Boolean جاهز للاستعمال في الفورم والواجهة
+    @property
+    def est_ferme(self) -> bool:
+        return self.check_statut != "OUVERT"
+
+    # ✅✅✅ (جديد) سبب الإغلاق للعرض في صفحة الرحلات
+    @property
+    def raison_fermeture(self) -> str:
+        if self.check_statut == "FERMÉ_COMPLET":
+            return "Complet (0 place disponible)"
+        if self.check_statut == "FERMÉ_TEMPS":
+            return "Délai (<30min) dépassé"
+        return ""
+
     def __str__(self):
-        # ✅ النص الذي سيظهر في قائمة الاختيار (dropdown)
         return (
             f"{self.trajet.ville_depart} -> {self.trajet.ville_arrivee} | "
             f"{self.date_depart.strftime('%Y-%m-%d')} {self.heure_depart.strftime('%H:%M')} | "
@@ -119,7 +169,26 @@ class Voyage(models.Model):
         )
 
 
+
 class Reservation(models.Model):
+    client = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+
+    # ✅ بيانات الزبون الخارجي (Autre)
+    autre_nom = models.CharField(max_length=120, null=True, blank=True)
+    autre_tel = models.CharField(max_length=30, null=True, blank=True)
+
+    # ✅ من أنشأ الحجز (مدير/عميل)
+    cree_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="reservations_creees"
+    )
+
     STATUT_CHOICES = [('réservé', 'Réservé'), ('confirmé', 'Confirmé'), ('annulé', 'Annulé'), ('payé', 'Payé')]
 
     id_reservation = models.AutoField(primary_key=True, db_column='id_reservation')

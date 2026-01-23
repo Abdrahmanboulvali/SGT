@@ -23,6 +23,7 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
 
   Future<void> fetchData() async {
     setState(() => isLoading = true);
+
     final url = Uri.parse("${ApiConfig.baseUrl}/api/mobile/mes-reservations/${widget.userId}/");
     final response = await http.get(url);
 
@@ -94,28 +95,34 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                     child: DataTable2(
                       columnSpacing: 12,
                       horizontalMargin: 12,
-                      minWidth: 640,
+                      minWidth: 680,
                       headingRowHeight: 44,
                       columns: const [
                         DataColumn2(label: Text("Trajet"), size: ColumnSize.L),
                         DataColumn(label: Text("Date")),
                         DataColumn(label: Text("Statut")),
+                        DataColumn(label: Text("Paiement")),
                         DataColumn(label: Text("Total")),
                         DataColumn(label: Text("Ticket")),
                       ],
                       rows: filteredData.map((res) {
-                        final status = (res['statut'] ?? "").toString();
-                        final isConfirmed = status.toLowerCase().contains("confirm");
-                        final ticketUrl = "${ApiConfig.baseUrl}/api/mobile/ticket/${res['id']}/";
+                        final statut = (res['statut'] ?? "").toString();
+                        final paiement = (res['statut_paiement'] ?? "").toString();
+                        final total = (res['prix_total'] ?? "").toString();
+
+                        // ✅ أهم نقطة: نأخذ ticket_url من السيرفر
+                        final ticketUrl = (res['ticket_url'] ?? "").toString().trim();
+                        final canDownload = ticketUrl.isNotEmpty;
 
                         return DataRow(cells: [
                           DataCell(Text(res['trajet'].toString())),
                           DataCell(Text(res['date'].toString())),
-                          DataCell(_buildStatusChip(status)),
-                          DataCell(Text("${res['prix_total']} MRU")),
+                          DataCell(_buildStatusChip(statut)),
+                          DataCell(_buildPaymentChip(paiement)),
+                          DataCell(Text("$total MRU")),
                           DataCell(
                             ElevatedButton.icon(
-                              onPressed: isConfirmed
+                              onPressed: canDownload
                                   ? () async {
                                       try {
                                         await TicketDownloader.downloadAndOpenPdf(
@@ -132,7 +139,7 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                                     }
                                   : null,
                               icon: const Icon(Icons.picture_as_pdf),
-                              label: const Text("Télécharger"),
+                              label: Text(canDownload ? "Télécharger" : "En attente"),
                             ),
                           ),
                         ]);
@@ -148,10 +155,32 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   Widget _buildStatusChip(String status) {
     final s = status.toLowerCase();
     final isConfirmed = s.contains('confirm');
-    final color = isConfirmed ? Colors.green : Colors.orange;
+    final isCanceled = s.contains('annul');
+
+    Color color;
+    if (isCanceled) {
+      color = Colors.red;
+    } else if (isConfirmed) {
+      color = Colors.green;
+    } else {
+      color = Colors.orange;
+    }
 
     return Chip(
       label: Text(status, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w800)),
+      backgroundColor: color.withOpacity(0.12),
+      side: BorderSide(color: color),
+    );
+  }
+
+  Widget _buildPaymentChip(String payment) {
+    final p = payment.toLowerCase();
+    final isPaid = p.contains("paye") || p.contains("payé");
+
+    final color = isPaid ? Colors.green : Colors.orange;
+
+    return Chip(
+      label: Text(payment, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w800)),
       backgroundColor: color.withOpacity(0.12),
       side: BorderSide(color: color),
     );

@@ -4,9 +4,9 @@ from django.core.exceptions import PermissionDenied
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, get_user_model, authenticate
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.db.models import Sum, Q, Count, F, Value, DecimalField, ExpressionWrapper
 from django.db.models.functions import TruncDate, Coalesce
 from django.utils import timezone
@@ -17,10 +17,14 @@ import numpy as np
 import easyocr
 import re
 import json
-
-# ✅ إضافات مطلوبة لتنزيل الاستمارة PDF بعد الحجز (بدون حذف أي شيء من كودك)
 import io
-from django.http import FileResponse
+
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
+from reportlab.lib import colors
+import qrcode
 
 from .models import Vehicule, Chauffeur, Trajet, Voyage, Reservation
 from .forms import (
@@ -91,7 +95,7 @@ def verify_payment_ocr(image_file, expected_amount, company_phone="37614881"):
         )
 
         # =========================
-        # استخراج transaction_id بدون الاعتماد على 02/08 (لأنه غير ثابت)
+        # استخراج transaction_id بدون الاعتماد على تاريخ (غير ثابت)
         # =========================
         transaction_id = None
 
@@ -122,40 +126,6 @@ def verify_payment_ocr(image_file, expected_amount, company_phone="37614881"):
 # ✅ PDF Ticket / Form (للتحميل بعد الحجز) - نسخة جميلة
 # =========================
 
-import io
-from django.http import FileResponse
-from django.shortcuts import get_object_or_404
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from reportlab.lib.units import cm
-import qrcode
-from PIL import Image
-
-from .models import Reservation
-
-
-def _generate_qr_image(data: str):
-    """إنشاء QR Code كصورة PIL"""
-    qr = qrcode.QRCode(
-        version=2,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=8,
-        border=2
-    )
-    qr.add_data(data)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    return img
-
-
-import io
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-from reportlab.lib.utils import ImageReader
-from reportlab.lib import colors
-
 def _build_ticket_pdf(reservation) -> io.BytesIO:
     """
     PDF Ticket محسّن بالشكل (header + card + badge + QR).
@@ -165,7 +135,7 @@ def _build_ticket_pdf(reservation) -> io.BytesIO:
     W, H = A4
 
     # ====== ألوان ======
-    BLUE = colors.HexColor("#1677ff")      # قريب من تصميم الويب
+    BLUE = colors.HexColor("#1677ff")
     LIGHT_BG = colors.HexColor("#f5f7fb")
     BORDER = colors.HexColor("#d9e2ef")
     TEXT = colors.HexColor("#0f172a")
@@ -176,7 +146,7 @@ def _build_ticket_pdf(reservation) -> io.BytesIO:
     c.setFillColor(LIGHT_BG)
     c.rect(0, 0, W, H, stroke=0, fill=1)
 
-    # ====== شريط جانبي بسيط ======
+    # ====== شريط جانبي ======
     side_w = 1.0 * cm
     c.setFillColor(colors.HexColor("#0b4fb3"))
     c.rect(0, 0, side_w, H, stroke=0, fill=1)
@@ -284,7 +254,6 @@ def _build_ticket_pdf(reservation) -> io.BytesIO:
     c.drawString(right_x, badge_y - 0.8*cm, f"{reservation.transaction_id or '-'}")
 
     try:
-        import qrcode
         qr_data = f"RES:{reservation.id_reservation}|TID:{reservation.transaction_id or ''}|TOTAL:{total:.2f}|TRAJET:{t.ville_depart}-{t.ville_arrivee}"
         qr_img = qrcode.make(qr_data)
 
@@ -312,15 +281,41 @@ def _build_ticket_pdf(reservation) -> io.BytesIO:
     return buffer
 
 
-def api_mobile_ticket_pdf(request, id_reservation):
+# ✅ NEW VIEW (Compatibility endpoint for Mobile)
+@csrf_exempt
+def api_mobile_reservations(request):
     """
-    GET /api/mobile/ticket/<id_reservation>/
-    يرجع PDF جميل للتذكرة.
+    ✅ Endpoint متوافق مع Flutter:
+    - GET  /api/mobile/reservations/?user_id=1   => يرجع حجوزات المستخدم
+    - POST /api/mobile/reservations/            => إنشاء حجز (نفس api_ajouter_reservation_mobile)
     """
-    res = get_object_or_404(Reservation, id_reservation=id_reservation)
-    pdf_buffer = _build_ticket_pdf(res)
 
+    if request.method == "GET":
+        user_id = request.GET.get("user_id")
+        if not user_id:
+            return JsonResponse({"status": "error", "message": "user_id requis"}, status=400)
+
+        return api_mes_reservations_mobile(request, int(user_id))
+
+    if request.method == "POST":
+        return api_ajouter_reservation_mobile(request)
+
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
+
+
+def api_mobile_ticket_pdf(request, id_reservation):
+
+    res = get_object_or_404(Reservation, id_reservation=id_reservation)
+
+    if not (res.statut == "confirmé" and res.statut_paiement == "paye"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Ticket disponible uniquement après validation."
+        }, status=403)
+
+    pdf_buffer = _build_ticket_pdf(res)
     filename = f"ticket_{res.id_reservation}.pdf"
+
     return FileResponse(
         pdf_buffer,
         as_attachment=True,
@@ -335,7 +330,6 @@ def api_mobile_ticket_pdf(request, id_reservation):
 
 def is_superviseur(user):
     """
-    ✅ التعديل المطلوب:
     - السماح دائمًا للـ Admin الحقيقي (superuser/staff)
     - حتى لو كانت قيمة role = CLIENT بالخطأ
     """
@@ -380,7 +374,7 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
 
-            # ✅ منع الزبون من دخول الويب (لكن اسمح للـ Admin/Staff دائمًا)
+            # منع الزبون من دخول الويب (لكن اسمح للـ Admin/Staff دائمًا)
             if getattr(user, "role", "") == "CLIENT" and not user.is_staff and not user.is_superuser:
                 messages.error(request, "Accès Web interdit pour les clients. Veuillez utiliser l'application mobile.")
                 return render(request, "auth/login.html", {"form": form})
@@ -750,16 +744,6 @@ def supprimer_voyage(request, id_voyage):
     return redirect("liste_voyages")
 
 
-@csrf_exempt
-def api_get_voyage_price(request, id_voyage):
-    v = get_object_or_404(Voyage, id_voyage=id_voyage)
-    return JsonResponse({
-        "id_voyage": v.id_voyage,
-        "prix_par_siege": float(v.prix_par_siege),
-        "trajet": str(v.trajet),
-        "date": v.date_depart.strftime("%Y-%m-%d"),
-        "heure": v.heure_depart.strftime("%H:%M"),
-    })
 
 
 # =========================
@@ -814,11 +798,6 @@ def supprimer_client(request, id):
 # Reservations (Web)
 # =========================
 
-@login_required
-def liste_reservations(request):
-    reservations = Reservation.objects.all().order_by("-date_reservation")
-    return render(request, "reservations/liste.html", {"reservations": reservations})
-
 
 @login_required
 def mes_reservations(request):
@@ -828,103 +807,6 @@ def mes_reservations(request):
     reservations = Reservation.objects.filter(client=request.user).order_by("-date_reservation")
     return render(request, "reservations/mes_reservations.html", {"reservations": reservations})
 
-
-@login_required
-def ajouter_reservation(request):
-    if request.method == "POST":
-        data = request.POST.copy()
-
-        if getattr(request.user, "role", "") == "CLIENT":
-            data["client"] = request.user.id
-
-        form = ReservationForm(data, request.FILES)
-
-        if form.is_valid():
-            v = form.cleaned_data["voyage"]
-            n = form.cleaned_data["nb_sieges"]
-
-            reserved = (
-                Reservation.objects.filter(voyage=v)
-                .exclude(statut="annulé")
-                .aggregate(s=Sum("nb_sieges"))["s"] or 0
-            )
-            available = v.vehicule.capacite - reserved
-            if n > available:
-                messages.error(request, f"Places insuffisantes. Disponible: {available}")
-                return render(request, "reservations/form.html", {"form": form})
-
-            total_price_expected = float(v.prix_par_siege * n)
-
-            if getattr(request.user, "role", "") == "CLIENT":
-                if "preuve_paiement" not in request.FILES:
-                    messages.error(request, "Preuve de paiement requise.")
-                    return render(request, "reservations/form.html", {"form": form})
-
-                image_file = request.FILES["preuve_paiement"]
-                ok, tid = verify_payment_ocr(image_file, total_price_expected)
-
-                if ok and tid:
-                    if Reservation.objects.filter(transaction_id=tid).exists():
-                        messages.error(request, "Transaction déjà utilisée.")
-                        return render(request, "reservations/form.html", {"form": form})
-
-                    res = form.save(commit=False)
-                    res.transaction_id = tid
-                    res.statut_paiement = "paye"
-                    res.statut = "confirmé"
-                    res.save()
-
-                    messages.success(request, f"Succès! ID: {tid}")
-                    return redirect("ticket_reservation", id_reservation=res.id_reservation)
-
-                messages.error(request, "Échec de validation OCR.")
-                return render(request, "reservations/form.html", {"form": form})
-
-            else:
-                res = form.save(commit=False)
-
-                if res.statut in ("confirmé", "payé"):
-                    res.statut = "confirmé"
-                    res.statut_paiement = "paye"
-                else:
-                    res.statut_paiement = "en_attente"
-
-                res.save()
-
-                messages.success(request, "Réservation ajoutée avec succès.")
-                return redirect("ticket_reservation", id_reservation=res.id_reservation)
-
-        return render(request, "reservations/form.html", {"form": form})
-
-    else:
-        form = ReservationForm()
-
-    return render(request, "reservations/form.html", {"form": form})
-
-
-@login_required
-def modifier_reservation(request, id_reservation):
-    res = get_object_or_404(Reservation, id_reservation=id_reservation)
-    if request.method == "POST":
-        form = ReservationForm(request.POST, request.FILES, instance=res)
-        if form.is_valid():
-            res = form.save(commit=False)
-
-            if res.statut in ("confirmé", "payé"):
-                res.statut = "confirmé"
-                res.statut_paiement = "paye"
-            elif res.statut == "annulé":
-                res.statut_paiement = "en_attente"
-            else:
-                res.statut_paiement = "en_attente"
-
-            res.save()
-            messages.success(request, "Réservation mise à jour.")
-            return redirect("liste_reservations")
-
-    else:
-        form = ReservationForm(instance=res)
-    return render(request, "reservations/form.html", {"form": form, "title": "Modifier Réservation"})
 
 
 @login_required
@@ -937,10 +819,22 @@ def supprimer_reservation(request, id_reservation):
 
 @login_required
 def ticket_reservation(request, id_reservation):
+    """
+    ✅ إرسال montant_total للـ template
+    بدل الاعتماد على حقل داخل model
+    """
     res = get_object_or_404(Reservation, id_reservation=id_reservation)
+
+    montant_total = 0.0
+    try:
+        montant_total = float(res.nb_sieges * (res.voyage.prix_par_siege or 0))
+    except Exception:
+        montant_total = 0.0
+
     return render(request, "reservations/ticket.html", {
         "reservation": res,
         "res": res,
+        "montant_total": montant_total,
     })
 
 
@@ -978,11 +872,6 @@ def activer_compte(request, user_id):
     return redirect("gestion_comptes")
 
 
-# ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
-# ✅ الإصلاح التام هنا:
-# استبدلنا user_passes_test(...raise_exception=True)
-# بـ superviseur_required (لأن raise_exception غير مدعوم)
-# ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
 @superviseur_required
 def desactiver_compte(request, user_id):
     u = get_object_or_404(User, id=user_id)
@@ -1026,14 +915,24 @@ def api_login_mobile(request):
     try:
         data = json.loads(request.body.decode("utf-8"))
         user = authenticate(username=data.get("username"), password=data.get("password"))
-        if user:
-            return JsonResponse({
-                "status": "success",
-                "user_id": user.id,
-                "username": user.username,
-                "role": getattr(user, "role", "")
-            })
-        return JsonResponse({"status": "error", "message": "Identifiants incorrects"}, status=400)
+
+        if not user:
+            return JsonResponse({"status": "error", "message": "Identifiants incorrects"}, status=400)
+
+        if not user.is_active:
+            return JsonResponse({"status": "error", "message": "Compte désactivé"}, status=403)
+
+
+        if getattr(user, "role", "") != "CLIENT":
+            return JsonResponse({"status": "error", "message": "Accès mobile réservé aux clients."}, status=403)
+
+        return JsonResponse({
+            "status": "success",
+            "user_id": user.id,
+            "username": user.username,
+            "role": getattr(user, "role", "")
+        })
+
     except Exception:
         return JsonResponse({"status": "error", "message": "Format invalide"}, status=400)
 
@@ -1112,106 +1011,746 @@ def api_get_voyages_mobile(request):
     return JsonResponse(data, safe=False)
 
 
+# ✅ NEW/UPDATED فقط
+import os
+import mimetypes
+from django.http import Http404
+from django.views.decorators.http import require_GET
+
+
+# views.py (ONLY MODIFIED / ADDED PARTS)
+
+import os
+import uuid
+from django.utils import timezone
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.db.models import Sum
+from django.views.decorators.csrf import csrf_exempt
+
+from .models import Voyage, Reservation
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+# ✅ تعديل مهم: API السعر (حتى يشتغل كود JS الذي يستعمل data.prix)
+@csrf_exempt
+def api_get_voyage_price(request, id_voyage):
+    v = get_object_or_404(Voyage, id_voyage=id_voyage)
+    price = float(v.prix_par_siege or 0)
+
+    return JsonResponse({
+        "id_voyage": v.id_voyage,
+        "prix_par_siege": price,
+        "prix": price,  # ✅ مهم للـ JS في form.html
+        "trajet": str(v.trajet),
+        "date": v.date_depart.strftime("%Y-%m-%d"),
+        "heure": v.heure_depart.strftime("%H:%M"),
+    })
+
+
+# ✅ تحسين بسيط: ترتيب الحجوزات (المنتظرة تظهر أولاً)
+def liste_reservations(request):
+    reservations = Reservation.objects.all().order_by("statut_paiement", "-date_reservation")
+    return render(request, "reservations/liste.html", {"reservations": reservations})
+
+
+# ✅✅✅ أهم تعديل: إنشاء حجز من Mobile = دائمًا en_attente + حفظ الصورة فعليًا
+# views.py ✅ MODIFIED ONLY THIS FUNCTION
+
+import json
+import base64
+import uuid
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
+from django.contrib import messages
+
+from .models import Reservation, Voyage
+
+
+User = get_user_model()
+
+
+# ✅ دالة صغيرة: ترجع قيمة صحيحة من choices بدون ما تكسر المشروع
+def safe_choice(model, field_name, preferred_values):
+    """
+    preferred_values: list مثل ['en_attente', 'en attente']
+    ترجع أول قيمة موجودة فعلاً في choices.
+    """
+    field = model._meta.get_field(field_name)
+    allowed = {c[0] for c in field.choices} if field.choices else set()
+
+    for v in preferred_values:
+        if v in allowed:
+            return v
+
+    # fallback: default إن كان موجود
+    if hasattr(field, "default") and field.default in allowed:
+        return field.default
+
+    # fallback آخر: أول اختيار
+    return next(iter(allowed)) if allowed else preferred_values[0]
+
+
+# =========================================================
+# ✅ (WEB) إضافة حجز من الويب => Payé مباشرة + Confirmé
+# =========================================================
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+
+from .models import Reservation
+from .forms import ReservationWebForm
+
+
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+
+from .models import Reservation
+from .forms import ReservationWebForm
+
+User = get_user_model()
+
+
+def _create_client_if_not_exists(nom: str, tel: str):
+    """
+    ✅ ينشئ Client جديد إذا لم يوجد
+    - نحاول جعل username = الهاتف
+    - إذا موجود نضيف رقم عشوائي صغير
+    """
+    base_username = tel.strip()
+    username = base_username
+
+    i = 1
+    while User.objects.filter(username=username).exists():
+        i += 1
+        username = f"{base_username}_{i}"
+
+    # إنشاء العميل
+    user = User.objects.create_user(
+        username=username,
+        password=User.objects.make_random_password(),
+    )
+
+    # محاولة حفظ الاسم في first_name إن كان موجوداً
+    try:
+        user.first_name = nom
+        user.save()
+    except Exception:
+        pass
+
+    # محاولة حفظ الهاتف إذا كان في User (بعض المشاريع فيه phone أو telephone)
+    for field_name in ["telephone", "phone", "tel"]:
+        if hasattr(user, field_name):
+            try:
+                setattr(user, field_name, tel)
+                user.save()
+            except Exception:
+                pass
+
+    return user
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
+
+from .models import Reservation
+from .forms import ReservationWebForm
+
+
+def _safe_decrease_places(voyage, nb):
+    """
+    ✅ ينقص places_dispo إذا كان الحقل موجوداً
+    """
+    if hasattr(voyage, "places_dispo"):
+        try:
+            voyage.places_dispo = int(voyage.places_dispo) - int(nb)
+            if voyage.places_dispo < 0:
+                voyage.places_dispo = 0
+            voyage.save(update_fields=["places_dispo"])
+        except Exception:
+            pass
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+
+from .forms import ReservationWebForm
+from .models import Reservation
+
+
+@login_required
+def ajouter_reservation(request):
+    if request.method == "POST":
+        form = ReservationWebForm(request.POST)
+
+        if form.is_valid():
+            client_mode = form.cleaned_data.get("client_mode")
+            client = form.cleaned_data.get("client")   # ✅ قد تكون None
+            autre_nom = form.cleaned_data.get("autre_nom")
+            autre_tel = form.cleaned_data.get("autre_tel")
+            voyage = form.cleaned_data.get("voyage")
+            nb_sieges = form.cleaned_data.get("nb_sieges")
+            mode_paiement = form.cleaned_data.get("mode_paiement")  # ✅ الصحيح
+
+            r = Reservation.objects.create(
+                client=client,              # None إذا Autre
+                autre_nom=autre_nom if client_mode == "other" else None,
+                autre_tel=autre_tel if client_mode == "other" else None,
+                voyage=voyage,
+                nb_sieges=nb_sieges,
+                cree_par=request.user
+            )
+
+            # ✅ إذا عندك حقل اسمه mode_paiement في Reservation خزنه
+            if hasattr(r, "mode_paiement"):
+                r.mode_paiement = mode_paiement
+
+            # ✅ تأكيد مباشر لحجوزات الويب (عدّل حسب أسماء حقولك)
+            if hasattr(r, "statut"):
+                r.statut = "confirmé"
+
+            if hasattr(r, "statut_paiement"):
+                r.statut_paiement = "paye"
+
+            r.save()
+
+            messages.success(request, "✅ Réservation ajoutée avec succès.")
+            return redirect("liste_reservations")
+
+    else:
+        form = ReservationWebForm()
+
+    return render(request, "reservations/form.html", {"form": form})
+
+
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+from django.views.decorators.http import require_GET
+
+
+@require_GET
+def api_web_clients_search(request):
+    q = (request.GET.get("q") or "").strip()
+    User = get_user_model()
+
+    qs = User.objects.all().order_by("username")
+
+    if q:
+        qs = qs.filter(username__icontains=q)
+
+    qs = qs[:20]  # ✅ رجّع 20 فقط
+
+    results = []
+    for u in qs:
+        results.append({
+            "id": u.pk,
+            "text": str(u.username)
+        })
+
+    return JsonResponse({"results": results})
+
+
+
+@login_required
+def modifier_reservation(request, reservation_id):
+    r = get_object_or_404(Reservation, id_reservation=reservation_id)
+
+    if request.method == "POST":
+        form = ReservationWebForm(request.POST, request.FILES, instance=r)
+        if form.is_valid():
+            r = form.save(commit=False)
+
+            # ✅ لا نغير العميل
+            # ✅ يبقى Confirmé في الويب
+            r.statut = "confirmé"
+
+            mode = form.cleaned_data.get("mode_paiement")
+            preuve = form.cleaned_data.get("preuve_paiement")
+
+            if mode in ["cash", "carte"]:
+                r.statut_paiement = "paye"
+            else:
+                if preuve:
+                    r.statut_paiement = "paye"
+                else:
+                    r.statut_paiement = "en_attente"
+
+            r.save()
+            return redirect("liste_reservations")
+    else:
+        form = ReservationWebForm(instance=r)
+
+    return render(request, "reservations/form.html", {
+        "form": form,
+        "page_title": "Modifier réservation",
+        "is_edit": True
+    })
+
+
+# =========================================================
+# ✅ (WEB) تأكيد الدفع من طرف المدير
+# =========================================================
+@login_required
+def confirmer_paiement(request, id_reservation):
+    r = get_object_or_404(Reservation, id_reservation=id_reservation)
+
+    # ✅ عند التأكيد => Payé + Confirmé
+    r.statut_paiement = safe_choice(Reservation, "statut_paiement", ["paye", "payé"])
+    r.statut = safe_choice(Reservation, "statut", ["confirmé", "confirme", "confirmé"])
+    r.save()
+
+    messages.success(request, f"Paiement confirmé pour la réservation #{r.id_reservation}.")
+    return redirect("liste_reservations")
+
+
+# =========================================================
+# ✅ (MOBILE) إنشاء حجز من الهاتف => En attente دائماً
+# يدعم:
+# - JSON (base64 image)
+# - multipart/form-data (file)
+# =========================================================
 @csrf_exempt
 def api_ajouter_reservation_mobile(request):
+    # ✅ ندعم GET فقط كي لا يعطي 404 في المتصفح (يعطي رسالة)
+    if request.method == "GET":
+        return JsonResponse(
+            {"status": "error", "message": "Utilisez POST pour créer une réservation."},
+            status=405
+        )
+
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
 
+    # ======== قراءة البيانات ========
+    data = {}
     try:
-        v_id = request.POST.get("voyage_id")
-        u_id = request.POST.get("client_id")
-        seats_raw = request.POST.get("nb_sieges")
-        preuve = request.FILES.get("preuve_paiement")
+        if request.content_type and "application/json" in request.content_type:
+            data = json.loads(request.body.decode("utf-8"))
+        else:
+            data = request.POST.dict()
+    except Exception:
+        data = request.POST.dict()
 
-        if not v_id or not u_id or not seats_raw:
-            return JsonResponse({"status": "error", "message": "Paramètres manquants"}, status=400)
+    # ======== client ========
+    client = None
+    if request.user.is_authenticated:
+        client = request.user
+    else:
+        user_id = data.get("user_id")
+        if user_id:
+            client = User.objects.filter(id=user_id).first()
 
-        if not preuve:
-            return JsonResponse({"status": "error", "message": "Preuve de paiement requise"}, status=400)
+    if not client:
+        return JsonResponse({"status": "error", "message": "Utilisateur introuvable"}, status=400)
 
-        user = get_object_or_404(User, id=u_id)
-        if getattr(user, "role", "") != "CLIENT":
-            return JsonResponse({"status": "error", "message": "Accès refusé (CLIENT فقط)"}, status=403)
+    # ======== voyage ========
+    voyage_id = data.get("voyage_id") or data.get("id_voyage")
+    if not voyage_id:
+        return JsonResponse({"status": "error", "message": "voyage_id manquant"}, status=400)
 
-        seats = int(seats_raw)
-        if seats <= 0:
-            return JsonResponse({"status": "error", "message": "nb_sieges invalide"}, status=400)
+    # جرّب id_voyage أو id حسب موديلك
+    voyage = Voyage.objects.filter(id_voyage=voyage_id).first() or Voyage.objects.filter(id=voyage_id).first()
+    if not voyage:
+        return JsonResponse({"status": "error", "message": "Voyage introuvable"}, status=404)
 
-        voyage = get_object_or_404(Voyage, id_voyage=v_id)
+    # ======== nb_sieges ========
+    try:
+        nb_sieges = int(data.get("nb_sieges", 1))
+        if nb_sieges <= 0:
+            nb_sieges = 1
+    except Exception:
+        nb_sieges = 1
 
-        if voyage.check_statut != "OUVERT":
-            return JsonResponse({"status": "error", "message": "Voyage fermé"}, status=400)
+    # ✅ (Mobile) دائمًا en attente
+    statut_pending = safe_choice(Reservation, "statut", ["en_attente", "en attente"])
+    paiement_pending = safe_choice(Reservation, "statut_paiement", ["en_attente", "en attente"])
 
-        reserved = (
-            Reservation.objects.filter(voyage=voyage)
-            .exclude(statut="annulé")
-            .aggregate(s=Sum("nb_sieges"))["s"] or 0
+    r = Reservation(
+        client=client,
+        voyage=voyage,
+        nb_sieges=nb_sieges,
+        statut=statut_pending,
+        statut_paiement=paiement_pending,
+    )
+
+    # ======== preuve paiement (file أو base64) ========
+    # 1) Multipart file
+    if "preuve_paiement" in request.FILES:
+        r.preuve_paiement = request.FILES["preuve_paiement"]
+
+    # 2) base64 داخل JSON
+    else:
+        b64 = (
+            data.get("preuve_paiement_base64")
+            or data.get("preuve_base64")
+            or data.get("image_base64")
         )
-        available = voyage.vehicule.capacite - reserved
-        if seats > available:
-            return JsonResponse(
-                {"status": "error", "message": f"Places insuffisantes. Disponible: {available}"},
-                status=400
-            )
 
-        total = float(voyage.prix_par_siege * seats)
+        if b64:
+            try:
+                if "base64," in b64:
+                    b64 = b64.split("base64,")[-1]
 
-        ok, tid = verify_payment_ocr(preuve, total)
-        if not (ok and tid):
-            return JsonResponse({"status": "error", "message": "Paiement non reconnu"}, status=400)
+                img_bytes = base64.b64decode(b64)
+                filename = f"{uuid.uuid4().hex}.jpg"
+                r.preuve_paiement.save(filename, ContentFile(img_bytes), save=False)
+            except Exception:
+                # لا نكسر الحجز، فقط نتركها بدون صورة
+                pass
 
-        if Reservation.objects.filter(transaction_id=tid).exists():
-            return JsonResponse({"status": "error", "message": "Transaction déjà utilisée"}, status=400)
+    r.save()
 
-        res = Reservation.objects.create(
-            voyage=voyage,
-            client=user,
-            nb_sieges=seats,
-            preuve_paiement=preuve,
-            transaction_id=tid,
-            statut_paiement="paye",
-            statut="confirmé",
-        )
-
-        ticket_url = request.build_absolute_uri(f"/api/mobile/ticket/{res.id_reservation}/")
-
-        return JsonResponse({
+    return JsonResponse(
+        {
             "status": "success",
-            "tid": tid,
-            "reservation_id": res.id_reservation,
-            "ticket_url": ticket_url
-        }, status=201)
+            "message": "Réservation envoyée ✅ En attente de validation par le gestionnaire.",
+            "reservation_id": r.id_reservation,
+        },
+        status=201,
+    )
 
-    except ValueError:
-        return JsonResponse({"status": "error", "message": "nb_sieges doit être un entier"}, status=400)
-    except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
+# =========================================================
+# ✅ (MOBILE) عرض حجوزات مستخدم (كما هو عندك لكن مضبوط)
+# =========================================================
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+from django.views.decorators.http import require_GET
+
+from .models import Reservation
+
+
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET
+
+from .models import Reservation
+
+
+from django.urls import reverse
+from django.http import JsonResponse, FileResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET
+from django.contrib.auth import get_user_model
+
+import re
+from decimal import Decimal, InvalidOperation
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from django.views.decorators.http import require_GET
+
+from .models import Reservation
+
+
+# ===========================
+# ✅ Helpers: استخراج السعر من أي مكان
+# ===========================
+def _parse_decimal(value):
+    """يحاول تحويل أي قيمة إلى Decimal (حتى لو كانت string مثل '897 MRU')"""
+    if value is None:
+        return None
+
+    # لو رقم جاهز
+    try:
+        return Decimal(str(value))
+    except Exception:
+        pass
+
+    # لو نص فيه رقم
+    s = str(value).strip()
+    if not s:
+        return None
+
+    # خذ أول رقم في النص
+    match = re.search(r"[-+]?\d+[.,]?\d*", s)
+    if not match:
+        return None
+
+    num = match.group(0).replace(",", ".")
+    try:
+        return Decimal(num)
+    except (InvalidOperation, ValueError):
+        return None
+
+
+from decimal import Decimal
+from django.urls import reverse
+
+# ===========================
+# ✅ سيريالايزر موحد للموبايل (مع Total صحيح + date)
+# ===========================
+def _serialize_reservation_mobile(r, request):
+    voyage = getattr(r, "voyage", None)
+    trajet = getattr(voyage, "trajet", None) if voyage else None
+
+    rid = getattr(r, "id_reservation", None) or getattr(r, "id", None)
+
+    raw_statut = str(getattr(r, "statut", "") or "")
+    raw_paiement = str(getattr(r, "statut_paiement", "") or "")
+
+    # ========== NORMALISATION (Display) ==========
+    statut_display = raw_statut.strip()
+    paiement_display = raw_paiement.strip()
+
+    # ✅ توحيد statut
+    if raw_statut.lower().strip() in ["confirme", "confirmé", "confirmed"]:
+        statut_display = "confirmé"
+    elif raw_statut.lower().strip() in ["reserve", "réservé", "reservé", "reserved"]:
+        statut_display = "réservé"
+
+    # ✅ توحيد paiement
+    if raw_paiement.lower().strip() in ["paye", "payé", "paid"]:
+        paiement_display = "payé"
+    elif raw_paiement.lower().strip() in ["en_attente", "en attente", "pending"]:
+        paiement_display = "en_attente"
+    elif raw_paiement.lower().strip() in ["echoue", "échoué", "failed"]:
+        paiement_display = "echoue"
+
+    # ========== CODES (بدون accent) ==========
+    statut_code = raw_statut.lower().strip()
+    paiement_code = raw_paiement.lower().strip()
+
+    if statut_code in ["confirmé"]:
+        statut_code = "confirme"
+    if paiement_code in ["payé"]:
+        paiement_code = "paye"
+
+    # ✅ ticket_ready (الشرط الحقيقي)
+    ticket_ready = (statut_display == "confirmé" and paiement_display == "payé")
+
+    # ✅ رابط PDF فقط إذا جاهز
+    ticket_url = None
+    if ticket_ready and rid is not None:
+        ticket_url = request.build_absolute_uri(
+            reverse("api_mobile_ticket_pdf", args=[rid])
+        )
+
+    # ✅ proof url
+    preuve_url = None
+    if getattr(r, "preuve_paiement", None):
+        try:
+            preuve_url = request.build_absolute_uri(r.preuve_paiement.url)
+        except Exception:
+            preuve_url = None
+
+    # ===========================
+    # ✅ Total
+    # ===========================
+    nb = int(getattr(r, "nb_sieges", 1) or 1)
+
+    unit_price = _find_unit_price(voyage) or _find_unit_price(trajet)
+
+    total = None
+    prix_unitaire = None
+    try:
+        if unit_price is not None:
+            prix_unitaire = float(unit_price)
+            total = float(Decimal(str(unit_price)) * Decimal(nb))
+    except Exception:
+        total = None
+        prix_unitaire = None
+
+    # ===========================
+    # ✅ DATE FOR FLUTTER (حتى لا تظهر null)
+    # ===========================
+    date_depart_str = ""
+    heure_depart_str = ""
+
+    if voyage and getattr(voyage, "date_depart", None):
+        try:
+            date_depart_str = voyage.date_depart.strftime("%Y-%m-%d")
+        except Exception:
+            date_depart_str = ""
+
+    if voyage and getattr(voyage, "heure_depart", None):
+        try:
+            heure_depart_str = voyage.heure_depart.strftime("%H:%M")
+        except Exception:
+            heure_depart_str = str(voyage.heure_depart)
+
+    date_affiche = ""
+    if date_depart_str and heure_depart_str:
+        date_affiche = f"{date_depart_str} {heure_depart_str}"
+    elif date_depart_str:
+        date_affiche = date_depart_str
+
+    return {
+        "id_reservation": rid,
+
+        "trajet": f"{trajet.ville_depart} -> {trajet.ville_arrivee}" if trajet else "",
+
+        # ✅ هذا المفتاح يحل مشكلة null في Flutter
+        "date": date_affiche,
+
+        "date_depart": date_depart_str,
+        "heure_depart": heure_depart_str,
+
+        "nb_sieges": nb,
+        "date_reservation": r.date_reservation.strftime("%Y-%m-%d %H:%M:%S") if getattr(r, "date_reservation", None) else "",
+
+        # ✅ الحقول التي يقرأها Flutter
+        "statut": statut_display,
+        "paiement": paiement_display,
+
+        # ✅ احتياط (بعض نسخ Dart تستعملها)
+        "statut_code": statut_code,
+        "paiement_code": paiement_code,
+        "statut_paiement": paiement_display,
+        "statut_paiement_code": paiement_code,
+
+        # ✅ إثبات الدفع
+        "preuve_paiement": preuve_url,
+
+        # ✅ Ticket
+        "ticket_ready": ticket_ready,
+        "ticket": "disponible" if ticket_ready else "en_attente",
+        "ticket_url": ticket_url,
+
+        # ✅ Total
+        "prix_unitaire": prix_unitaire,
+        "total": total,
+
+        # ✅ مفاتيح إضافية احتياطًا (بدون تعديل Dart)
+        "total_a_payer": total,
+        "montant_total": total,
+        "prix_total": total,
+    }
+
+
+# ===========================
+# ✅ Helper: استخراج سعر الوحدة من أي object
+# ===========================
+def _find_unit_price(obj):
+    if obj is None:
+        return None
+
+    # جرّب أسماء حقول كثيرة
+    candidates = [
+        "prix_par_siege", "prix_siege", "prix",
+        "price", "unit_price", "tarif",
+        "montant", "amount",
+    ]
+
+    for name in candidates:
+        if hasattr(obj, name):
+            val = getattr(obj, name, None)
+            if val is not None:
+                try:
+                    return Decimal(str(val))
+                except Exception:
+                    try:
+                        return Decimal(float(val))
+                    except Exception:
+                        return None
+
+    return None
+
+@require_GET
+def api_mes_reservations_mobile(request, user_id):
+    User = get_user_model()
+    user = get_object_or_404(User, id=user_id)
+
+    qs = (
+        Reservation.objects
+        .filter(client=user)
+        .select_related("voyage", "voyage__trajet")
+        .order_by("-date_reservation")
+    )
+
+    data = [_serialize_reservation_mobile(r, request) for r in qs]
+    return JsonResponse(data, safe=False, status=200)
+
+
+@require_GET
+def api_mes_reservations_mobile_no_id(request):
+    """
+    ✅ حل إضافي لو Flutter يطلب endpoint بدون /id/
+    GET /api/mobile/reservations/?user_id=23639
+    """
+    user_key = (request.GET.get("user_id") or "").strip()
+
+    if not user_key.isdigit():
+        # ✅ لازم List حتى لا ينهار Dart
+        return JsonResponse([], safe=False, status=200)
+
+    User = get_user_model()
+    user = User.objects.filter(id=int(user_key)).first()
+
+    if not user:
+        return JsonResponse([], safe=False, status=200)
+
+    qs = (
+        Reservation.objects
+        .filter(client=user)
+        .select_related("voyage", "voyage__trajet")
+        .order_by("-date_reservation")
+    )
+
+    data = [_serialize_reservation_mobile(r, request) for r in qs]
+    return JsonResponse(data, safe=False, status=200)
+
+
+# ✅ Endpoint جديد لتفادي 404 عند /api/mobile/reservations/
+# GET /api/mobile/reservations/?user_id=12
+# views.py  ✅ ONLY THIS FUNCTION MODIFIED
 
 @csrf_exempt
-def api_mes_reservations_mobile(request, user_id):
-    res_list = Reservation.objects.filter(client_id=user_id).order_by("-date_reservation")
-    data = []
-    for r in res_list:
-        prix_total = float(r.nb_sieges * r.voyage.prix_par_siege) if r.voyage.prix_par_siege is not None else 0.0
-        data.append({
-            "id": r.id_reservation,
-            "trajet": str(r.voyage.trajet),
-            "date": r.voyage.date_depart.strftime("%Y-%m-%d"),
-            "statut": r.statut,
-            "prix_total": prix_total,
-            "ticket_url": f"http://10.9.164.178:8000/api/mobile/ticket/{r.id_reservation}/",
-        })
-    return JsonResponse(data, safe=False)
+def api_reservations_mobile(request):
+    # ✅ POST => create reservation (mobile)
+    if request.method == "POST":
+        return api_ajouter_reservation_mobile(request)
+
+    # ✅ GET => list reservations for one user
+    if request.method == "GET":
+        user_id = request.GET.get("user_id")
+        if not user_id:
+            return JsonResponse({"status": "error", "message": "user_id requis"}, status=400)
+
+        return api_mes_reservations_mobile(request, int(user_id))
+
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
 
 
+@superviseur_required
+def voir_preuve_paiement(request, id_reservation):
+    res = get_object_or_404(Reservation, id_reservation=id_reservation)
+
+    if not res.preuve_paiement:
+        raise Http404("Aucune preuve")
+
+    file_path = res.preuve_paiement.path
+
+    if not os.path.exists(file_path):
+        raise Http404("Fichier preuve introuvable")
+
+    content_type, _ = mimetypes.guess_type(file_path)
+    return FileResponse(open(file_path, "rb"), content_type=content_type or "image/jpeg")
+
+
+
+
+# =========================
+# DRF API (اختياري)
+# =========================
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from django.utils import timezone
-from datetime import datetime
-from .models import Voyage
 from .serializers import VoyageMobileSerializer
-
 
 @api_view(["GET"])
 def mobile_voyages(request):
