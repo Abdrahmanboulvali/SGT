@@ -35,7 +35,11 @@ class _MyAppState extends State<MyApp> {
         future: _loadSession(),
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
           }
           if (snap.data == null) {
             return const LoginScreen();

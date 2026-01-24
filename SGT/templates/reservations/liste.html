@@ -16,7 +16,7 @@
 <div class="card shadow-sm border-0">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover align-middle datatable">
+            <table class="table table-hover align-middle datatable compact">
                 <thead class="table-light">
                     <tr>
                         <th>Client</th>
@@ -32,7 +32,7 @@
                 <tbody>
                     {% for r in reservations %}
                         <tr>
-                            <!-- ✅ Client -->
+                            <!-- Client -->
                             <td class="fw-bold text-dark">
                                 {% if r.client %}
                                     {{ r.client.username }}
@@ -42,7 +42,7 @@
                                 {% endif %}
                             </td>
 
-                            <!-- ✅ Trajet & Voyage -->
+                            <!-- Trajet & Voyage -->
                             <td>
                                 <span class="badge bg-info text-dark">
                                     {{ r.voyage.trajet.ville_depart }} → {{ r.voyage.trajet.ville_arrivee }}
@@ -51,7 +51,7 @@
                                 <small class="text-muted">ID: #{{ r.voyage.id_voyage }}</small>
                             </td>
 
-                            <!-- ✅ Départ -->
+                            <!-- Départ -->
                             <td>
                                 <div>{{ r.voyage.date_depart|date:"d/m/Y" }}</div>
                                 <small class="text-muted">
@@ -59,12 +59,12 @@
                                 </small>
                             </td>
 
-                            <!-- ✅ Sièges -->
+                            <!-- Sièges -->
                             <td class="text-center">
                                 <span class="badge rounded-pill bg-secondary">{{ r.nb_sieges }}</span>
                             </td>
 
-                            <!-- ✅ Statut Paiement -->
+                            <!-- Statut Paiement -->
                             <td>
                                 {% if r.statut_paiement == 'paye' or r.statut_paiement == 'payé' %}
                                     <span class="badge bg-success">
@@ -83,11 +83,11 @@
 
                             <td>{{ r.date_reservation|date:"d/m/Y H:i" }}</td>
 
-                            <!-- ✅ Actions -->
+                            <!-- Actions -->
                             <td class="text-end">
                                 <div class="d-flex justify-content-end gap-1 flex-wrap">
 
-                                    <!-- ✅ Ticket يظهر فقط إذا Payé + Confirmé -->
+                                    <!-- Ticket -->
                                     {% if r.statut_paiement == 'paye' or r.statut_paiement == 'payé' %}
                                         {% if r.statut == 'confirmé' or r.statut == 'confirme' %}
                                             <a href="{% url 'ticket_reservation' r.id_reservation %}"
@@ -98,49 +98,20 @@
                                         {% endif %}
                                     {% endif %}
 
-                                    <!-- ✅ Preuve (تأتي فقط غالبًا من Mobile) -->
+                                    <!-- ✅ Preuve (زر فقط) -->
                                     {% if r.preuve_paiement %}
                                         <button type="button"
-                                                class="btn btn-sm btn-info text-white"
+                                                class="btn btn-sm btn-info text-white btn-preuve"
                                                 title="Voir la preuve de paiement"
                                                 data-bs-toggle="modal"
-                                                data-bs-target="#preuveModal{{ r.id_reservation }}">
+                                                data-bs-target="#preuveModal"
+                                                data-img-url="{{ r.preuve_paiement.url }}"
+                                                data-res-id="{{ r.id_reservation }}">
                                             <i class="bi bi-image-fill"></i>
                                         </button>
-
-                                        <!-- ✅ Modal Preuve -->
-                                        <div class="modal fade" id="preuveModal{{ r.id_reservation }}" tabindex="-1" aria-hidden="true">
-                                            <div class="modal-dialog modal-dialog-centered modal-lg">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">
-                                                            <i class="bi bi-receipt"></i>
-                                                            Preuve de paiement - Réservation #{{ r.id_reservation }}
-                                                        </h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-
-                                                    <div class="modal-body text-center">
-                                                        <img src="{{ r.preuve_paiement.url }}"
-                                                             class="img-fluid rounded border"
-                                                             alt="Preuve paiement">
-                                                    </div>
-
-                                                    <div class="modal-footer">
-                                                        <a href="{{ r.preuve_paiement.url }}" target="_blank"
-                                                           class="btn btn-outline-secondary">
-                                                            <i class="bi bi-box-arrow-up-right"></i> Ouvrir
-                                                        </a>
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                            Fermer
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
                                     {% endif %}
 
-                                    <!-- ✅ Confirmer paiement يظهر فقط إذا En attente (Mobile) -->
+                                    <!-- Confirmer paiement -->
                                     {% if r.statut_paiement == 'en_attente' or r.statut_paiement == 'en attente' %}
                                         <a href="{% url 'confirmer_paiement' r.id_reservation %}"
                                            class="btn btn-sm btn-success"
@@ -150,14 +121,14 @@
                                         </a>
                                     {% endif %}
 
-                                    <!-- ✅ Modifier -->
+                                    <!-- Modifier -->
                                     <a href="{% url 'modifier_reservation' r.id_reservation %}"
                                        class="btn btn-sm btn-warning text-dark"
                                        title="Modifier la réservation">
                                         <i class="bi bi-pencil-fill"></i>
                                     </a>
 
-                                    <!-- ✅ Supprimer -->
+                                    <!-- Supprimer -->
                                     <a href="{% url 'supprimer_reservation' r.id_reservation %}"
                                        class="btn btn-sm btn-danger"
                                        onclick="return confirm('Annuler cette réservation ?');"
@@ -183,4 +154,61 @@
         </div>
     </div>
 </div>
+
+<!-- ✅ ✅ ✅ Modal واحد فقط (خارج الجدول) -->
+<div class="modal fade" id="preuveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="preuveTitle">
+          <i class="bi bi-receipt"></i>
+          Preuve de paiement
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body text-center">
+        <img id="preuveImg" src="" class="img-fluid rounded border" alt="Preuve paiement">
+      </div>
+
+      <div class="modal-footer">
+        <a id="preuveOpen" href="#" target="_blank" class="btn btn-outline-secondary">
+          <i class="bi bi-box-arrow-up-right"></i> Ouvrir
+        </a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Fermer
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ✅ JS يحقن الصورة داخل المودال -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const modalEl = document.getElementById("preuveModal");
+  const imgEl   = document.getElementById("preuveImg");
+  const openEl  = document.getElementById("preuveOpen");
+  const titleEl = document.getElementById("preuveTitle");
+
+  document.querySelectorAll(".btn-preuve").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const url   = this.getAttribute("data-img-url");
+      const resId = this.getAttribute("data-res-id");
+
+      imgEl.src = url;
+      openEl.href = url;
+      titleEl.innerHTML = `<i class="bi bi-receipt"></i> Preuve de paiement - Réservation #${resId}`;
+    });
+  });
+
+  // ✅ تنظيف بعد الإغلاق (مفيد)
+  modalEl.addEventListener("hidden.bs.modal", function () {
+    imgEl.src = "";
+    openEl.href = "#";
+  });
+});
+</script>
 {% endblock %}

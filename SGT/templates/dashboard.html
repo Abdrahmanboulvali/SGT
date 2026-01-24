@@ -3,175 +3,235 @@
 {% block title %}Tableau de bord - SGT{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Tableau de bord</h2>
 
-<!-- ✅ KPI الأساسية (كما هي) -->
+<style>
+/* ✅ Fix KPI cards alignment (same height) */
+.kpi-card{
+  height: 140px;
+  display: flex;
+  align-items: stretch;
+}
+
+.kpi-card .card-body{
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.kpi-icon{
+  font-size: 26px;
+  opacity: .9;
+}
+
+.kpi-sub{
+  min-height: 18px;
+}
+</style>
+
+<!-- ✅ Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-1">Tableau de bord</h2>
+
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+        <a href="{% url 'liste_reservations' %}" class="btn btn-outline-primary btn-sm">
+            <i class="fa-solid fa-clipboard-list me-1"></i> Réservations
+        </a>
+        <a href="{% url 'liste_voyages' %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-ticket me-1"></i> Voyages
+        </a>
+    </div>
+</div>
+
+<!-- ✅ KPI Row #1 -->
 <div class="row g-3">
     <div class="col-md-3">
-        <div class="card text-bg-primary">
+        <div class="card text-bg-primary kpi-card">
             <div class="card-body">
-                <h6 class="card-title">Trajets</h6>
-                <p class="display-6">{{ trajets }}</p>
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h6 class="card-title mb-1">Trajets</h6>
+                        <p class="display-6 mb-0">{{ trajets }}</p>
+                        <div class="text-muted small mt-1 kpi-sub">Total enregistrés</div>
+                    </div>
+                    <i class="fa-solid fa-route kpi-icon"></i>
+                </div>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="card text-bg-success">
+        <div class="card text-bg-success kpi-card">
             <div class="card-body">
-                <h6 class="card-title">Véhicules</h6>
-                <p class="display-6">{{ vehicules }}</p>
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h6 class="card-title mb-1">Véhicules</h6>
+                        <p class="display-6 mb-0">{{ vehicules }}</p>
+                        <div class="text-muted small mt-1 kpi-sub">Flotte active</div>
+                    </div>
+                    <i class="fa-solid fa-truck-front kpi-icon"></i>
+                </div>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="card text-bg-warning">
+        <div class="card text-bg-warning kpi-card">
             <div class="card-body">
-                <h6 class="card-title">Chauffeurs</h6>
-                <p class="display-6">{{ chauffeurs }}</p>
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h6 class="card-title mb-1">Chauffeurs</h6>
+                        <p class="display-6 mb-0">{{ chauffeurs }}</p>
+                        <div class="text-muted small mt-1 kpi-sub">Disponibles</div>
+                    </div>
+                    <i class="fa-solid fa-id-card-clip kpi-icon"></i>
+                </div>
             </div>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="card text-bg-info">
+        <div class="card text-bg-info kpi-card">
             <div class="card-body">
-                <h6 class="card-title">Voyages</h6>
-                <p class="display-6">{{ voyages }}</p>
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h6 class="card-title mb-1">Voyages</h6>
+                        <p class="display-6 mb-0">{{ voyages }}</p>
+                        <div class="text-muted small mt-1 kpi-sub">Total programmés</div>
+                    </div>
+                    <i class="fa-solid fa-bus-simple kpi-icon"></i>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-3 mt-3">
+<!-- ✅ KPI Row #2 -->
+<div class="row g-3 mt-1">
     <div class="col-md-3">
-        <div class="card text-bg-secondary">
+        <div class="card text-bg-secondary kpi-card">
             <div class="card-body">
-                <h6 class="card-title">Réservations</h6>
-                <p class="display-6">{{ reservations }}</p>
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h6 class="card-title mb-1">Réservations</h6>
+                        <p class="display-6 mb-0">{{ reservations }}</p>
+                        <div class="text-muted small mt-1 kpi-sub">Total enregistrées</div>
+                    </div>
+                    <i class="fa-solid fa-bookmark kpi-icon"></i>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ✅ KPI إضافية -->
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm kpi-card">
             <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-start justify-content-between">
                     <div>
                         <div class="text-muted small">Clients</div>
                         <div class="h3 mb-0">{{ clients }}</div>
+                        <div class="text-muted small mt-1 kpi-sub">Comptes actifs</div>
                     </div>
-                    <i class="fa-solid fa-user-group fa-xl text-primary"></i>
+                    <i class="fa-solid fa-user-group fa-xl text-primary kpi-icon"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm kpi-card">
             <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-start justify-content-between">
                     <div>
                         <div class="text-muted small">Réservations aujourd'hui</div>
                         <div class="h3 mb-0">{{ reservations_today }}</div>
+                        <div class="text-muted small mt-1 kpi-sub">Dernières 24h</div>
                     </div>
-                    <i class="fa-solid fa-calendar-day fa-xl text-primary"></i>
+                    <i class="fa-solid fa-calendar-day fa-xl text-primary kpi-icon"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm kpi-card">
             <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-start justify-content-between">
                     <div>
                         <div class="text-muted small">Chiffre d'affaires aujourd'hui</div>
-                        <div class="h3 mb-0">{{ revenue_today|floatformat:2 }} <span class="text-muted fs-6">MRU</span></div>
+                        <div class="h3 mb-0">
+                            {{ revenue_today|floatformat:2 }}
+                            <span class="text-muted fs-6">MRU</span>
+                        </div>
+                        <div class="text-muted small mt-1 kpi-sub">Total du jour</div>
                     </div>
-                    <i class="fa-solid fa-money-bill-trend-up fa-xl text-success"></i>
+                    <i class="fa-solid fa-money-bill-trend-up fa-xl text-success kpi-icon"></i>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ✅ مؤشرات تتغير مع الوقت -->
-<div class="row g-3 mt-3">
+<!-- ✅ KPI Row #3 -->
+<div class="row g-3 mt-1">
     <div class="col-lg-3">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm kpi-card">
             <div class="card-body">
-                <div class="text-muted small">Voyages aujourd'hui</div>
-                <div class="h3 mb-0">{{ voyages_today }}</div>
-            </div>
-        </div>
-    </div>
-
-<!--    <div class="col-lg-3">-->
-<!--        <div class="card border-0 shadow-sm">-->
-<!--            <div class="card-body">-->
-<!--                <div class="text-muted small">Voyages (7 jours prochains)</div>-->
-<!--                <div class="h3 mb-0">{{ voyages_next7 }}</div>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
-
-<!--    <div class="col-lg-3">-->
-<!--        <div class="card border-0 shadow-sm">-->
-<!--            <div class="card-body">-->
-<!--                <div class="text-muted small">CA (30 jours)</div>-->
-<!--                <div class="h3 mb-0">{{ revenue_30|floatformat:2 }} <span class="text-muted fs-6">MRU</span></div>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
-
-<!--    <div class="col-lg-3">-->
-<!--        <div class="card border-0 shadow-sm">-->
-<!--            <div class="card-body">-->
-<!--                <div class="text-muted small">Seats réservées (30 jours)</div>-->
-<!--                <div class="h3 mb-0">{{ seats_30|floatformat:0 }}</div>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
-<!--</div>-->
-
-<div class="row g-3 mt-3">
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-start justify-content-between">
                     <div>
-                        <div class="text-muted small">Taux d'annulation (30 jours)</div>
-                        <div class="h3 mb-1">{{ taux_annulation_30|floatformat:1 }}%</div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar" role="progressbar" style="width: {{ taux_annulation_30|floatformat:0 }}%;"></div>
-                        </div>
+                        <div class="text-muted small">Voyages aujourd'hui</div>
+                        <div class="h3 mb-0">{{ voyages_today }}</div>
+                        <div class="text-muted small mt-1 kpi-sub">Activité du jour</div>
                     </div>
-                    <i class="fa-solid fa-ban fa-xl text-danger"></i>
+                    <i class="fa-solid fa-clock fa-xl text-primary kpi-icon"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm kpi-card">
             <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="text-muted small">Taux d'occupation (7 jours)</div>
-                        <div class="h3 mb-1">{{ taux_occupation_7|floatformat:1 }}%</div>
+                <div class="d-flex align-items-start justify-content-between w-100">
+                    <div class="w-100">
+                        <div class="text-muted small">Taux d'annulation (30 jours)</div>
+                        <div class="h3 mb-2">{{ taux_annulation_30|floatformat:1 }}%</div>
                         <div class="progress" style="height: 8px;">
-                            <div class="progress-bar" role="progressbar" style="width: {{ taux_occupation_7|floatformat:0 }}%;"></div>
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: {{ taux_annulation_30|floatformat:0 }}%;"></div>
                         </div>
+                        <div class="text-muted small mt-2 kpi-sub">Indicateur mensuel</div>
                     </div>
-                    <i class="fa-solid fa-users fa-xl text-success"></i>
+                    <i class="fa-solid fa-ban fa-xl text-danger ms-3 kpi-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm kpi-card">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between w-100">
+                    <div class="w-100">
+                        <div class="text-muted small">Taux d'occupation (7 jours)</div>
+                        <div class="h3 mb-2">{{ taux_occupation_7|floatformat:1 }}%</div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: {{ taux_occupation_7|floatformat:0 }}%;"></div>
+                        </div>
+                        <div class="text-muted small mt-2 kpi-sub">Tendance hebdomadaire</div>
+                    </div>
+                    <i class="fa-solid fa-users fa-xl text-success ms-3 kpi-icon"></i>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ✅ الرسوم -->
-<div class="row g-3 mt-3">
+<!-- ✅ Charts -->
+<div class="row g-3 mt-1">
     <div class="col-lg-6">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white d-flex align-items-center justify-content-between">
@@ -203,8 +263,8 @@
     </div>
 </div>
 
-<!-- ✅ جداول احترافية -->
-<div class="row g-3 mt-3">
+<!-- ✅ Tables -->
+<div class="row g-3 mt-1">
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white d-flex align-items-center gap-2">
@@ -215,26 +275,28 @@
                 <div class="table-responsive">
                     <table class="table table-striped mb-0">
                         <thead>
-                            <tr>
-                                <th>Trajet</th>
-                                <th>Date</th>
-                                <th>Heure</th>
-                                <th>Reste</th>
-                            </tr>
+                        <tr>
+                            <th>Trajet</th>
+                            <th>Date</th>
+                            <th>Heure</th>
+                            <th>Reste</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {% for v in upcoming_voyages %}
-                                <tr>
-                                    <td>{{ v.trajet }}</td>
-                                    <td>{{ v.date }}</td>
-                                    <td>{{ v.heure }}</td>
-                                    <td>{{ v.remaining }}/{{ v.cap }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">Aucun voyage à venir.</td>
-                                </tr>
-                            {% endfor %}
+                        {% for v in upcoming_voyages %}
+                            <tr>
+                                <td>{{ v.trajet }}</td>
+                                <td>{{ v.date }}</td>
+                                <td>{{ v.heure }}</td>
+                                <td>{{ v.remaining }}/{{ v.cap }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">
+                                    Aucun voyage à venir.
+                                </td>
+                            </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -252,22 +314,24 @@
                 <div class="table-responsive">
                     <table class="table table-striped mb-0">
                         <thead>
-                            <tr>
-                                <th>Trajet</th>
-                                <th>Réservations</th>
-                            </tr>
+                        <tr>
+                            <th>Trajet</th>
+                            <th>Réservations</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {% for t in top_trajets %}
-                                <tr>
-                                    <td>{{ t.voyage__trajet__ville_depart }} → {{ t.voyage__trajet__ville_arrivee }}</td>
-                                    <td>{{ t.nb }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="2" class="text-center text-muted py-3">Aucune donnée.</td>
-                                </tr>
-                            {% endfor %}
+                        {% for t in top_trajets %}
+                            <tr>
+                                <td>{{ t.voyage__trajet__ville_depart }} → {{ t.voyage__trajet__ville_arrivee }}</td>
+                                <td>{{ t.nb }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-3">
+                                    Aucune donnée.
+                                </td>
+                            </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -276,11 +340,10 @@
     </div>
 </div>
 
-<!-- ✅ تمرير البيانات للـ JS بأمان -->
+<!-- ✅ JSON data -->
 {{ labels_7d|json_script:"labels7d" }}
 {{ reservations_7d|json_script:"res7d" }}
 {{ revenue_7d|json_script:"rev7d" }}
-
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
@@ -338,5 +401,5 @@
     }
 })();
 </script>
+
 {% endblock %}
-</div>

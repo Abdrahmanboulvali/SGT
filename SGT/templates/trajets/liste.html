@@ -3,43 +3,105 @@
 {% block title %}Trajets - SGT{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Trajets</h2>
-    <a href="{% url 'ajouter_trajet' %}" class="btn btn-primary">+ Ajouter un trajet</a>
+
+<!-- ✅ Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-1">
+            <i class="fa-solid fa-route text-primary me-1"></i>
+            Trajets
+        </h2>
+
+    </div>
+
+    <div class="mt-2 mt-md-0">
+        <a href="{% url 'ajouter_trajet' %}" class="btn btn-primary">
+            <i class="fa-solid fa-plus me-1"></i> Ajouter un trajet
+        </a>
+    </div>
 </div>
 
-<table class="table table-striped table-bordered datatable">
-    <thead class="table-light">
-        <tr>
-            <th>Ville de départ</th>
-            <th>Ville d’arrivée</th>
-            <th>Distance (km)</th>
-            <th>Durée prévue</th>
-            <th class="text-end">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for t in trajets %}
-            <tr>
-                <td>{{ t.ville_depart }}</td>
-                <td>{{ t.ville_arrivee }}</td>
-                <td>{{ t.distance_km }}</td>
-                <td>{{ t.duree_prevue }}</td>
-                <td class="text-end">
-                    <a href="{% url 'modifier_trajet' t.id_trajet %}"
-                       class="btn btn-sm btn-warning">Modifier</a>
-                    <a href="{% url 'supprimer_trajet' t.id_trajet %}"
-                       class="btn btn-sm btn-danger"
-                       onclick="return confirm('Supprimer ce trajet ?');">
-                        Supprimer
-                    </a>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="5" class="text-center">Aucun trajet.</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!-- ✅ Table Card -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle datatable mb-0">
+                <thead>
+                <tr>
+                    <th>Ville de départ</th>
+                    <th>Ville d’arrivée</th>
+                    <th>Distance</th>
+                    <th>Durée prévue</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                {% for t in trajets %}
+                    <tr>
+                        <!-- ✅ Ville départ -->
+                        <td class="fw-bold text-dark">
+                            <i class="fa-solid fa-location-dot text-primary me-1"></i>
+                            {{ t.ville_depart }}
+                        </td>
+
+                        <!-- ✅ Ville arrivée -->
+                        <td class="fw-bold text-dark">
+                            <i class="fa-solid fa-flag-checkered text-success me-1"></i>
+                            {{ t.ville_arrivee }}
+                        </td>
+
+                        <!-- ✅ Distance -->
+                        <td>
+                            <span class="badge bg-info text-dark">
+                                {{ t.distance_km }} km
+                            </span>
+                        </td>
+
+                        <!-- ✅ Durée -->
+                        <td>
+                            <span class="badge bg-secondary">
+                                {{ t.duree_prevue }}
+                            </span>
+                        </td>
+
+                        <!-- ✅ Actions -->
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-1 flex-wrap">
+
+                                <!-- Modifier -->
+                                <a href="{% url 'modifier_trajet' t.id_trajet %}"
+                                   class="btn btn-sm btn-warning text-dark"
+                                   title="Modifier">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+
+                                <!-- Supprimer -->
+                                <a href="{% url 'supprimer_trajet' t.id_trajet %}"
+                                   class="btn btn-sm btn-danger"
+                                   title="Supprimer"
+                                   onclick="return confirm('Supprimer ce trajet ?');">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-inbox fs-2 d-block mb-2"></i>
+                            Aucun trajet trouvé.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+    </div>
+</div>
+
 {% endblock %}

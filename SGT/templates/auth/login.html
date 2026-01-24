@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion - SGT</title>
 
     <!-- Bootstrap -->
@@ -15,162 +16,302 @@
           crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
-        body {
-            min-height: 100vh;
-            background: radial-gradient(circle at top left, #0d6efd 0, #001f3f 45%, #020617 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
+        :root{
+            --bg1:#0b1220;
+            --bg2:#020617;
+            --pri:#2563eb;
+            --pri2:#06b6d4;
+            --text:#0f172a;
+            --muted:#64748b;
+            --border:#e6eef9;
+            --shadow: 0 30px 70px rgba(0,0,0,.42);
+            --radius: 22px;
         }
 
-        .auth-card {
-            max-width: 900px;
-            width: 100%;
+        *{ box-sizing:border-box; }
+        html, body { height: 100%; }
+
+        body{
+            margin:0;
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding: 18px;
+            background:
+                radial-gradient(1200px 650px at 15% 10%, rgba(37,99,235,.25), transparent 55%),
+                radial-gradient(1000px 650px at 90% 20%, rgba(6,182,212,.20), transparent 55%),
+                radial-gradient(900px 600px at 50% 100%, rgba(124,58,237,.16), transparent 60%),
+                linear-gradient(180deg, var(--bg1), var(--bg2));
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
+        }
+
+        .auth-shell{
+            width: min(980px, 100%);
+            border-radius: var(--radius);
+            overflow:hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255,255,255,.10);
+            background: rgba(255,255,255,.96);
+            backdrop-filter: blur(10px);
+        }
+
+        .auth-left{
+            position: relative;
+            padding: 44px 34px;
+            color: #fff;
+            background:
+                radial-gradient(800px 450px at 0% 0%, rgba(255,255,255,.16), transparent 60%),
+                linear-gradient(135deg, #2563eb, #06b6d4);
+        }
+
+        .brand-badge{
+            width: 54px;
+            height: 54px;
+            border-radius: 18px;
+            display:grid;
+            place-items:center;
+            background: rgba(15,23,42,.20);
+            border: 1px solid rgba(255,255,255,.25);
+            box-shadow: 0 18px 30px rgba(0,0,0,.22);
+            margin-bottom: 18px;
+        }
+
+        .auth-left h1{
+            font-size: 1.85rem;
+            font-weight: 950;
+            letter-spacing: -.6px;
+            margin:0 0 10px 0;
+        }
+
+        .auth-left p{
+            margin:0;
+            font-size: .98rem;
+            opacity: .92;
+            line-height: 1.55;
+        }
+
+        .auth-left .note{
+            margin-top: 26px;
+            padding: 14px 14px;
+            border-radius: 18px;
+            background: rgba(255,255,255,.14);
+            border: 1px solid rgba(255,255,255,.20);
+            font-size: .90rem;
+            opacity: .95;
+        }
+
+        .auth-right{
+            padding: 44px 38px;
             background: #ffffff;
-            border-radius: 1rem;
-            overflow: hidden;
-            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
         }
 
-        .auth-illustration {
-            background: linear-gradient(160deg, #0d6efd, #1e40af);
-            color: #f9fafb;
-            padding: 2.5rem 2rem;
+        .auth-right h4{
+            font-weight: 950;
+            letter-spacing: -.4px;
+            color: var(--text);
+            margin-bottom: 6px;
         }
 
-        .auth-illustration h1 {
-            font-size: 1.8rem;
-            margin-bottom: 0.75rem;
+        .auth-right .subtitle{
+            color: var(--muted);
+            margin-bottom: 22px;
             font-weight: 600;
         }
 
-        .auth-illustration p {
-            font-size: 0.95rem;
-            opacity: 0.9;
+        /* Inputs */
+        .form-label{
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
         }
 
-        .auth-illustration .icon-badge {
-            width: 3rem;
-            height: 3rem;
-            border-radius: 999px;
-            background-color: rgba(15, 23, 42, 0.25);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1rem;
+        .input-group{
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid #dbe7f6;
+            background: #fff;
+            box-shadow: 0 12px 22px rgba(15,23,42,.06);
+            transition: .18s ease;
         }
 
-        .auth-form {
-            padding: 2.5rem 2rem;
+        .input-group:focus-within{
+            border-color: rgba(37,99,235,.55);
+            box-shadow: 0 0 0 4px rgba(37,99,235,.12), 0 12px 22px rgba(15,23,42,.06);
         }
 
-        .auth-form .form-control {
-            border-radius: 0.6rem;
+        .input-group-text{
+            border: none !important;
+            background: rgba(37,99,235,.08) !important;
+            color: #2563eb !important;
+            width: 46px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
         }
 
-        .auth-form .input-group-text {
-            border-radius: 0.6rem 0 0 0.6rem;
+        input.form-control{
+            border: none !important;
+            box-shadow:none !important;
+            padding: 12px 12px !important;
+            font-weight: 700;
+            color: var(--text);
         }
 
-        .auth-form .btn-primary {
-            border-radius: 0.6rem;
-            font-weight: 500;
+        input.form-control::placeholder{
+            color: #94a3b8;
+            font-weight: 600;
         }
 
-        .small-link {
-            font-size: 0.9rem;
+        /* Button */
+        .btn-login{
+            border:none !important;
+            border-radius: 14px !important;
+            padding: 12px 14px !important;
+            font-weight: 900 !important;
+            letter-spacing: .2px;
+            background: linear-gradient(135deg, #2563eb, #06b6d4) !important;
+            box-shadow: 0 18px 30px rgba(37,99,235,.22);
+            transition: .18s ease;
+        }
+        .btn-login:hover{
+            transform: translateY(-1px);
+            filter: brightness(1.03);
         }
 
-        @media (max-width: 768px) {
-            .auth-illustration {
-                display: none;
+        .auth-footer{
+            margin-top: 16px;
+            text-align:center;
+            color: var(--muted);
+            font-weight: 650;
+            font-size: .92rem;
+        }
+
+        .auth-footer a{
+            font-weight: 900;
+            text-decoration:none;
+            color: #2563eb;
+        }
+
+        /* Alerts */
+        .alert{
+            border-radius: 16px;
+            border: 1px solid #e6eef9;
+            box-shadow: 0 12px 20px rgba(15,23,42,.06);
+        }
+
+        /* Django errors look */
+        .errorlist{
+            margin: 8px 0 0;
+            padding-left: 18px;
+            color: #dc2626;
+            font-weight: 700;
+            font-size: .90rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px){
+            .auth-left{
+                display:none;
             }
-            .auth-form {
-                padding: 2rem 1.5rem;
+            .auth-right{
+                padding: 34px 22px;
             }
-            .auth-card {
-                max-width: 430px;
+            .auth-shell{
+                width: min(480px, 100%);
             }
         }
     </style>
 </head>
+
 <body>
 
-<div class="auth-card row g-0">
-    <!-- Partie gauche : présentation -->
-    <div class="col-md-5 auth-illustration d-flex flex-column justify-content-between">
-        <div>
-            <div class="icon-badge">
-                <i class="fa-solid fa-bus-simple fa-lg"></i>
+<div class="auth-shell">
+    <div class="row g-0">
+
+        <!-- LEFT -->
+        <div class="col-md-5 auth-left d-flex flex-column justify-content-between">
+            <div>
+                <div class="brand-badge">
+                    <i class="fa-solid fa-bus-simple fa-lg"></i>
+                </div>
+
+                <h1>SGT • Gestion Transport</h1>
+                <p>
+                    Connectez-vous pour gérer <b>trajets</b>, <b>véhicules</b>, <b>chauffeurs</b>,
+                    <b>voyages</b>, <b>réservations</b> et <b>clients</b> depuis un tableau de bord moderne.
+                </p>
+
+                <div class="note">
+                    <i class="fa-solid fa-circle-info me-1"></i>
+                    Les comptes nouvellement créés doivent être validés par le superviseur.
+                </div>
             </div>
-            <h1>SGT - Gestion de transport</h1>
-            <p>
-                Connectez-vous pour gérer les trajets, véhicules, chauffeurs,
-                voyages, réservations et clients depuis un tableau de bord centralisé.
-            </p>
+
+            <div class="text-white-50 small">
+                <i class="fa-solid fa-shield-halved me-1"></i>
+                Accès sécurisé • Interface Pro
+            </div>
         </div>
-        <div class="mt-4 small text-white-50">
-            <i class="fa-solid fa-circle-info me-1"></i>
-            Les comptes nouvellement créés doivent être validés par le superviseur.
+
+        <!-- RIGHT -->
+        <div class="col-md-7 auth-right">
+            <h4>Connexion</h4>
+            <div class="subtitle">
+                Veuillez saisir vos identifiants pour accéder à la plateforme.
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <div class="mb-3">
+                    <label class="form-label">Nom d'utilisateur</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fa-regular fa-user"></i>
+                        </span>
+                        {{ form.username }}
+                    </div>
+                    {{ form.username.errors }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Mot de passe</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        {{ form.password }}
+                    </div>
+                    {{ form.password.errors }}
+                </div>
+
+                <button type="submit" class="btn btn-login w-100 mt-2 mb-2">
+                    <i class="fa-solid fa-right-to-bracket me-1"></i>
+                    Se connecter
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Vous n'avez pas de compte ?
+                <a href="{% url 'register' %}">Créer un compte</a>
+            </div>
         </div>
-    </div>
 
-    <!-- Partie droite : formulaire -->
-    <div class="col-md-7 auth-form">
-        <h4 class="mb-3">Connexion</h4>
-        <p class="text-muted mb-4">
-            Veuillez saisir vos identifiants pour accéder à la plateforme.
-        </p>
-
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        <form method="post" novalidate>
-            {% csrf_token %}
-            {{ form.non_field_errors }}
-
-            <div class="mb-3">
-                <label class="form-label">Nom d'utilisateur</label>
-                <div class="input-group">
-                    <span class="input-group-text">
-                        <i class="fa-regular fa-user"></i>
-                    </span>
-                    {{ form.username }}
-                </div>
-                {{ form.username.errors }}
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Mot de passe</label>
-                <div class="input-group">
-                    <span class="input-group-text">
-                        <i class="fa-solid fa-lock"></i>
-                    </span>
-                    {{ form.password }}
-                </div>
-                {{ form.password.errors }}
-            </div>
-
-            <button type="submit" class="btn btn-primary w-100 mt-2 mb-3">
-                <i class="fa-solid fa-right-to-bracket me-1"></i>
-                Se connecter
-            </button>
-        </form>
-
-        <p class="mt-3 text-center small-link">
-            Vous n'avez pas de compte ?
-            <a href="{% url 'register' %}">Créer un compte</a>
-        </p>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>

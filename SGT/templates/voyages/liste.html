@@ -3,13 +3,19 @@
 {% block title %}Voyages - SGT{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold"><i class="bi bi-bus-front"></i> Gestion des Voyages</h2>
+
+<!-- ✅ Header Premium فقط -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold m-0">
+        <i class="bi bi-bus-front"></i> Gestion des Voyages
+    </h2>
+
     <a href="{% url 'ajouter_voyage' %}" class="btn btn-primary shadow-sm">
         <i class="bi bi-plus-lg"></i> Planifier un voyage
     </a>
 </div>
 
+<!-- ✅ نفس جدولك كما هو داخل Card Premium -->
 <div class="card shadow-sm border-0">
     <div class="card-body">
         <table class="table table-hover align-middle datatable">
@@ -24,6 +30,7 @@
                     <th class="text-end">Actions</th>
                 </tr>
             </thead>
+
             <tbody>
                 {% for item in voyage_data %}
                     <tr {% if not item.is_open %}class="table-light text-muted"{% endif %}>
@@ -44,11 +51,13 @@
                         </td>
 
                         <td>{{ item.obj.heure_depart|time:"H:i" }}</td>
+
                         <td>
                             <span class="badge bg-info text-dark">
                                 {{ item.obj.trajet.ville_depart }} <i class="bi bi-arrow-right"></i> {{ item.obj.trajet.ville_arrivee }}
                             </span>
                         </td>
+
                         <td>
                             {{ item.obj.vehicule.matricule }}
                             <br>
@@ -56,6 +65,7 @@
                         </td>
 
                         <td>{{ item.obj.chauffeur.nom }} {{ item.obj.chauffeur.prenom }}</td>
+
                         <td class="fw-bold text-primary">{{ item.obj.prix_par_siege }} MRU</td>
 
                         <td class="text-end">
@@ -72,6 +82,7 @@
                             </div>
                         </td>
                     </tr>
+
                 {% empty %}
                     <tr>
                         <td colspan="7" class="text-center py-4 text-muted">Aucun voyage planifié.</td>
@@ -81,4 +92,5 @@
         </table>
     </div>
 </div>
+
 {% endblock %}

@@ -5,6 +5,7 @@ import 'booking_screen.dart';
 import 'MyReservations.dart';
 import 'LoginScreen.dart';
 import 'ui/ui_widgets.dart';
+import 'ui/app_theme.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int userId;
@@ -40,11 +41,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 16,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("Bonjour, ${widget.username}", style: const TextStyle(fontWeight: FontWeight.w900)),
-            Text("SGT Transport", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+            Text(
+              "SGT Transport",
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
         actions: [
@@ -58,11 +63,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: pages[_index],
       bottomNavigationBar: NavigationBar(
+        backgroundColor: Colors.white,
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
+        indicatorColor: AppTheme.primary.withOpacity(.12),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: "Accueil"),
-          NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: "Mes réservations"),
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: "Accueil",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history),
+            label: "Mes réservations",
+          ),
         ],
       ),
     );

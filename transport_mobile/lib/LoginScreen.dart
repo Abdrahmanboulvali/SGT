@@ -6,9 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'DashboardScreen.dart';
 import 'RegisterScreen.dart';
 import 'ui/ui_widgets.dart';
+import 'ui/app_theme.dart';
 
 class ApiConfig {
-
   static const String baseUrl = "http://127.0.0.1:8000";
 }
 
@@ -78,51 +78,73 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageShell(
-        maxWidth: 560,
-        child: SoftCard(
+      body: SafeArea(
+        child: PageShell(
+          maxWidth: 560,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SectionTitle(
-                "Connexion",
-                subtitle: "Accédez à votre espace SGT",
+              GradientHeader(
+                title: "SGT Transport",
+                subtitle: "Connectez-vous à votre espace",
+                icon: Icons.directions_bus,
               ),
-              TextField(
-                controller: _username,
-                decoration: const InputDecoration(
-                  labelText: "Nom d'utilisateur",
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _password,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: "Mot de passe",
-                  prefixIcon: Icon(Icons.lock_outline),
-                ),
-              ),
-              const SizedBox(height: 18),
-              PrimaryButton(
-                text: "Se connecter",
-                icon: Icons.login,
-                loading: _loading,
-                onPressed: _login,
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.center,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                    );
-                  },
-                  child: const Text("Créer un compte"),
+              const SizedBox(height: 14),
+
+              SoftCard(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SectionTitle("Connexion", subtitle: "Accédez à votre espace SGT"),
+
+                    TextField(
+                      controller: _username,
+                      decoration: const InputDecoration(
+                        labelText: "Nom d'utilisateur",
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextField(
+                      controller: _password,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: "Mot de passe",
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    PrimaryButton(
+                      text: "Se connecter",
+                      icon: Icons.login,
+                      loading: _loading,
+                      onPressed: _login,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          );
+                        },
+                        child: Text(
+                          "Créer un compte",
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

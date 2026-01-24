@@ -81,82 +81,116 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Créer un compte")),
-      body: SingleChildScrollView(
-        child: PageShell(
-          maxWidth: 720,
-          child: SoftCard(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: PageShell(
+            maxWidth: 720,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionTitle("Inscription", subtitle: "Rejoignez la plateforme SGT"),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: prenom,
-                        decoration: const InputDecoration(labelText: "Prénom", prefixIcon: Icon(Icons.badge_outlined)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: nom,
-                        decoration: const InputDecoration(labelText: "Nom", prefixIcon: Icon(Icons.badge_outlined)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: telephone,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: "Téléphone", prefixIcon: Icon(Icons.phone_outlined)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: email,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(labelText: "Email", prefixIcon: Icon(Icons.email_outlined)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: username,
-                  decoration: const InputDecoration(labelText: "Nom d'utilisateur", prefixIcon: Icon(Icons.person_outline)),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: password,
-                        obscureText: true,
-                        decoration: const InputDecoration(labelText: "Mot de passe", prefixIcon: Icon(Icons.lock_outline)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: password2,
-                        obscureText: true,
-                        decoration: const InputDecoration(labelText: "Confirmation", prefixIcon: Icon(Icons.verified_outlined)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                PrimaryButton(
-                  text: "Créer mon compte",
+                GradientHeader(
+                  title: "Inscription",
+                  subtitle: "Rejoignez la plateforme SGT",
                   icon: Icons.person_add_alt_1,
-                  loading: loading,
-                  onPressed: _register,
+                ),
+                const SizedBox(height: 14),
+
+                SoftCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SectionTitle("Informations", subtitle: "Remplissez les champs ci-dessous"),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: prenom,
+                              decoration: const InputDecoration(
+                                labelText: "Prénom",
+                                prefixIcon: Icon(Icons.badge_outlined),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: nom,
+                              decoration: const InputDecoration(
+                                labelText: "Nom",
+                                prefixIcon: Icon(Icons.badge_outlined),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: telephone,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(
+                                labelText: "Téléphone",
+                                prefixIcon: Icon(Icons.phone_outlined),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: email,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                labelText: "Email",
+                                prefixIcon: Icon(Icons.email_outlined),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: username,
+                        decoration: const InputDecoration(
+                          labelText: "Nom d'utilisateur",
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: password,
+                              obscureText: true,
+                              decoration: const InputDecoration(
+                                labelText: "Mot de passe",
+                                prefixIcon: Icon(Icons.lock_outline),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: password2,
+                              obscureText: true,
+                              decoration: const InputDecoration(
+                                labelText: "Confirmation",
+                                prefixIcon: Icon(Icons.verified_outlined),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      PrimaryButton(
+                        text: "Créer mon compte",
+                        icon: Icons.person_add_alt_1,
+                        loading: loading,
+                        onPressed: _register,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

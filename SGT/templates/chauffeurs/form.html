@@ -3,58 +3,88 @@
 {% block title %}Chauffeur - SGT{% endblock %}
 
 {% block content %}
+
+<!-- ✅ Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="mb-1 fw-bold">
+            <i class="fa-solid fa-id-badge text-primary me-2"></i>
+            {% if form.instance.pk %}Modifier le chauffeur{% else %}Nouveau chauffeur{% endif %}
+        </h2>
+
+    </div>
+</div>
+
+<!-- ✅ Form Card -->
 <div class="row justify-content-center">
     <div class="col-lg-7 col-xl-6">
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-primary text-white d-flex align-items-center">
-                <i class="fa-solid fa-id-badge me-2"></i>
-                <h5 class="mb-0">
-                    {% if form.instance.pk %}Modifier le chauffeur{% else %}Nouveau chauffeur{% endif %}
-                </h5>
+
+            <!-- Card Head -->
+            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-user-gear text-primary"></i>
+                    <strong>Informations chauffeur</strong>
+                </div>
+                <span class="badge text-bg-light">
+                    {% if form.instance.pk %}Update{% else %}Create{% endif %}
+                </span>
             </div>
+
             <div class="card-body">
 
                 <form method="post" novalidate>
                     {% csrf_token %}
                     {{ form.non_field_errors }}
 
-                    <!-- Nom -->
+                    <!-- ✅ Nom -->
                     <div class="mb-3">
-                        <label class="form-label">Nom du chauffeur *</label>
+                        <label class="form-label fw-bold">
+                            Nom du chauffeur <span class="text-danger">*</span>
+                        </label>
                         <div class="input-group">
                             <span class="input-group-text">
                                 <i class="fa-regular fa-user"></i>
                             </span>
                             {{ form.nom }}
                         </div>
-                        {{ form.nom.errors }}
+                        <div class="text-danger small mt-1">
+                            {{ form.nom.errors }}
+                        </div>
                     </div>
 
-                    <!-- Téléphone -->
+                    <!-- ✅ Téléphone -->
                     <div class="mb-3">
-                        <label class="form-label">Téléphone</label>
+                        <label class="form-label fw-bold">Téléphone</label>
                         <div class="input-group">
                             <span class="input-group-text">
                                 <i class="fa-solid fa-phone"></i>
                             </span>
                             {{ form.telephone }}
                         </div>
-                        {{ form.telephone.errors }}
+                        <div class="text-danger small mt-1">
+                            {{ form.telephone.errors }}
+                        </div>
                     </div>
 
-                    <div class="d-flex justify-content-end mt-3">
-                        <a href="{% url 'liste_chauffeurs' %}" class="btn btn-outline-secondary me-2">
+                    <!-- ✅ Buttons -->
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'liste_chauffeurs' %}" class="btn btn-outline-secondary">
+                            <i class="fa-solid fa-arrow-left me-1"></i>
                             Annuler
                         </a>
+
                         <button type="submit" class="btn btn-primary">
                             <i class="fa-solid fa-floppy-disk me-1"></i>
                             Enregistrer
                         </button>
                     </div>
+
                 </form>
 
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}

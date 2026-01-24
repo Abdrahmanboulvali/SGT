@@ -3,42 +3,111 @@
 {% block title %}Véhicules - SGT{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Véhicules</h2>
-    <a href="{% url 'ajouter_vehicule' %}" class="btn btn-primary">+ Ajouter un véhicule</a>
+
+<!-- ✅ Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-1">
+            <i class="fa-solid fa-truck-front text-primary me-1"></i> Véhicules
+        </h2>
+
+    </div>
+
+    <div class="mt-2 mt-md-0">
+        <a href="{% url 'ajouter_vehicule' %}" class="btn btn-primary">
+            <i class="fa-solid fa-plus me-1"></i> Ajouter un véhicule
+        </a>
+    </div>
 </div>
 
-<table class="table table-striped table-bordered datatable">
-    <thead class="table-light">
-        <tr>
-            <th>Matricule</th>
-            <th>Type</th>
-            <th>Capacité</th>
-            <th>Kilométrage total</th>
-            <th class="text-end">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for v in vehicules %}
-            <tr>
-                <td>{{ v.matricule }}</td>
-                <td>{{ v.type }}</td>
-                <td>{{ v.capacite }}</td>
-                <td>{{ v.kilometrage_total }}</td>
-                <td class="text-end">
-                    <a href="{% url 'modifier_vehicule' v.id_vehicule %}" class="btn btn-sm btn-warning">Modifier</a>
-                    <a href="{% url 'supprimer_vehicule' v.id_vehicule %}"
-                       class="btn btn-sm btn-danger"
-                       onclick="return confirm('Supprimer ce véhicule ?');">
-                        Supprimer
-                    </a>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="5" class="text-center">Aucun véhicule.</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!-- ✅ Table Card -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-list"></i>
+            <strong>Liste des véhicules</strong>
+        </div>
+        <span class="badge text-bg-light">DataTable</span>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle datatable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Matricule</th>
+                        <th>Type</th>
+                        <th class="text-center">Capacité</th>
+                        <th class="text-center">Kilométrage total</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for v in vehicules %}
+                        <tr>
+                            <!-- ✅ Matricule -->
+                            <td class="fw-bold text-dark">
+                                <i class="fa-solid fa-hashtag text-muted me-1"></i>
+                                {{ v.matricule }}
+                            </td>
+
+                            <!-- ✅ Type -->
+                            <td>
+                                <span class="badge bg-info text-dark">
+                                    {{ v.type }}
+                                </span>
+                            </td>
+
+                            <!-- ✅ Capacité -->
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-secondary">
+                                    {{ v.capacite }}
+                                </span>
+                            </td>
+
+                            <!-- ✅ Kilométrage -->
+                            <td class="text-center">
+                                <span class="fw-bold">
+                                    {{ v.kilometrage_total }}
+                                </span>
+                                <small class="text-muted"> km</small>
+                            </td>
+
+                            <!-- ✅ Actions -->
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-1 flex-wrap">
+
+                                    <a href="{% url 'modifier_vehicule' v.id_vehicule %}"
+                                       class="btn btn-sm btn-warning text-dark"
+                                       title="Modifier">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+
+                                    <a href="{% url 'supprimer_vehicule' v.id_vehicule %}"
+                                       class="btn btn-sm btn-danger"
+                                       onclick="return confirm('Supprimer ce véhicule ?');"
+                                       title="Supprimer">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+
+                                </div>
+                            </td>
+                        </tr>
+
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="fa-regular fa-folder-open fs-3 d-block mb-2"></i>
+                                Aucun véhicule trouvé.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

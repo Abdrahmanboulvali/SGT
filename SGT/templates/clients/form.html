@@ -1,81 +1,127 @@
 {% extends "base.html" %}
 
+{% block title %}Client - SGT{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-lg border-0 rounded-3">
-                <div class="card-header bg-primary text-white text-center py-3">
-                    <h4 class="mb-0 fw-bold">
-                        <i class="fas fa-user-plus me-2"></i> Nouveau Client
-                    </h4>
+
+<!-- ✅ Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="mb-1 fw-bold">
+            <i class="fa-solid fa-user-plus text-primary me-2"></i>
+            {% if form.instance.pk %}Modifier le client{% else %}Nouveau Client{% endif %}
+        </h2>
+
+    </div>
+</div>
+
+<!-- ✅ Centered Card -->
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-address-card text-primary"></i>
+                    <strong>Formulaire Client</strong>
                 </div>
-                <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
 
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger shadow-sm">
-                                {{ form.non_field_errors }}
-                            </div>
-                        {% endif %}
+                <span class="badge text-bg-light">
+                    {% if form.instance.pk %}Update{% else %}Create{% endif %}
+                </span>
+            </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Prénom</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
-                                    {{ form.first_name }}
-                                </div>
-                                {% if form.first_name.errors %}
-                                    <div class="text-danger small mt-1">{{ form.first_name.errors }}</div>
-                                {% endif %}
+            <div class="card-body p-4">
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <!-- ✅ Global errors -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger shadow-sm">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <!-- ✅ First name -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Prénom</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="fa-regular fa-user"></i>
+                                </span>
+                                {{ form.first_name }}
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Nom</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="fas fa-user-tag"></i></span>
-                                    {{ form.last_name }}
-                                </div>
-                                {% if form.last_name.errors %}
-                                    <div class="text-danger small mt-1">{{ form.last_name.errors }}</div>
-                                {% endif %}
-                            </div>
+                            {% if form.first_name.errors %}
+                                <div class="text-danger small mt-1">{{ form.first_name.errors }}</div>
+                            {% endif %}
                         </div>
 
-                        <div class="mb-3">
+                        <!-- ✅ Last name -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Nom</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="fa-solid fa-user-tag"></i>
+                                </span>
+                                {{ form.last_name }}
+                            </div>
+                            {% if form.last_name.errors %}
+                                <div class="text-danger small mt-1">{{ form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- ✅ Phone -->
+                        <div class="col-md-6">
                             <label class="form-label fw-bold">Téléphone</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="fas fa-phone"></i></span>
+                                <span class="input-group-text bg-light">
+                                    <i class="fa-solid fa-phone"></i>
+                                </span>
                                 {{ form.telephone }}
                             </div>
-                            <small class="text-muted">Ce numéro sera utilisé comme identifiant.</small>
+                            <div class="text-muted small mt-1">
+                                Ce numéro sera utilisé comme identifiant.
+                            </div>
                             {% if form.telephone.errors %}
                                 <div class="text-danger small mt-1">{{ form.telephone.errors }}</div>
                             {% endif %}
                         </div>
 
-                        <div class="mb-4">
+                        <!-- ✅ Email -->
+                        <div class="col-md-6">
                             <label class="form-label fw-bold">Email</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="fas fa-envelope"></i></span>
+                                <span class="input-group-text bg-light">
+                                    <i class="fa-regular fa-envelope"></i>
+                                </span>
                                 {{ form.email }}
                             </div>
                             {% if form.email.errors %}
                                 <div class="text-danger small mt-1">{{ form.email.errors }}</div>
                             {% endif %}
                         </div>
+                    </div>
 
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{% url 'liste_clients' %}" class="btn btn-outline-secondary px-4">Annuler</a>
-                            <button type="submit" class="btn btn-primary px-4 fw-bold">
-                                <i class="fas fa-save me-1"></i> Enregistrer
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <!-- ✅ Buttons -->
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'liste_clients' %}" class="btn btn-outline-secondary px-4">
+                            <i class="fa-solid fa-xmark me-1"></i> Annuler
+                        </a>
+
+                        <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>
+                            {% if form.instance.pk %}Mettre à jour{% else %}Enregistrer{% endif %}
+                        </button>
+                    </div>
+                </form>
+
             </div>
         </div>
+
     </div>
 </div>
+
 {% endblock %}

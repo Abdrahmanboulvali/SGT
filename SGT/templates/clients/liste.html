@@ -3,47 +3,90 @@
 {% block title %}Clients - SGT{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Clients</h2>
-    <a href="{% url 'ajouter_client' %}" class="btn btn-primary">
-        + Ajouter un client
+
+<!-- ✅ Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="mb-1 fw-bold">
+            <i class="fa-solid fa-user-group text-primary me-2"></i>
+            Clients
+        </h2>
+
+    </div>
+
+    <a href="{% url 'ajouter_client' %}" class="btn btn-primary shadow-sm mt-2 mt-md-0">
+        <i class="bi bi-plus-lg me-1"></i> Ajouter un client
     </a>
 </div>
 
-<table class="table table-striped table-bordered datatable">
-    <thead class="table-light">
-        <tr>
-            <th>Nom & Prénom</th>
-            <th>Téléphone</th>
-            <th>Email</th>
-            <th class="text-end">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for c in clients %}
-        <tr>
-            <td>{{ c.last_name }} {{ c.first_name }}</td>
-            <td>{{ c.telephone }}</td>
-            <td>{{ c.email }}</td>
-            <td class="text-end">
-                <a href="{% url 'modifier_client' c.id %}"
-                   class="btn btn-sm btn-warning">
-                    Modifier
-                </a>
-                <a href="{% url 'supprimer_client' c.id %}"
-                   class="btn btn-sm btn-danger"
-                   onclick="return confirm('Supprimer ce client ?');">
-                    Supprimer
-                </a>
-            </td>
-        </tr>
-    {% empty %}
-        <tr>
-            <td colspan="4" class="text-center text-muted">
-                Aucun client enregistré.
-            </td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<!-- ✅ Table Card -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-address-book text-primary"></i>
+            <strong>Gestion des Clients</strong>
+        </div>
+        <span class="badge text-bg-light">Auto</span>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle datatable mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nom & Prénom</th>
+                        <th>Téléphone</th>
+                        <th>Email</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for c in clients %}
+                    <tr>
+                        <td class="fw-bold text-dark">
+                            {{ c.last_name }} {{ c.first_name }}
+                        </td>
+                        <td>
+                            <i class="fa-solid fa-phone text-muted me-1"></i>
+                            {{ c.telephone }}
+                        </td>
+                        <td>
+                            <i class="fa-regular fa-envelope text-muted me-1"></i>
+                            {{ c.email|default:"-" }}
+                        </td>
+
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-1 flex-wrap">
+                                <a href="{% url 'modifier_client' c.id %}"
+                                   class="btn btn-sm btn-warning text-dark"
+                                   title="Modifier">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+
+                                <a href="{% url 'supprimer_client' c.id %}"
+                                   class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Supprimer ce client ?');"
+                                   title="Supprimer">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            Aucun client enregistré.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

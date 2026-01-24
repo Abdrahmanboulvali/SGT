@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'LoginScreen.dart';
 import 'ticket_downloader.dart';
 import 'ui/ui_widgets.dart';
+import 'ui/app_theme.dart';
 
 class MyReservationsScreen extends StatefulWidget {
   final int userId;
@@ -63,8 +64,16 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   @override
   Widget build(BuildContext context) {
     return PageShell(
+      maxWidth: 920,
       child: Column(
         children: [
+          GradientHeader(
+            title: "Mes réservations",
+            subtitle: "Historique • Statut • Tickets PDF",
+            icon: Icons.history,
+          ),
+          const SizedBox(height: 12),
+
           SoftCard(
             child: Row(
               children: [
@@ -88,63 +97,160 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
             ),
           ),
           const SizedBox(height: 12),
+
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : SoftCard(
-                    child: DataTable2(
-                      columnSpacing: 12,
-                      horizontalMargin: 12,
-                      minWidth: 680,
-                      headingRowHeight: 44,
-                      columns: const [
-                        DataColumn2(label: Text("Trajet"), size: ColumnSize.L),
-                        DataColumn(label: Text("Date")),
-                        DataColumn(label: Text("Statut")),
-                        DataColumn(label: Text("Paiement")),
-                        DataColumn(label: Text("Total")),
-                        DataColumn(label: Text("Ticket")),
-                      ],
-                      rows: filteredData.map((res) {
-                        final statut = (res['statut'] ?? "").toString();
-                        final paiement = (res['statut_paiement'] ?? "").toString();
-                        final total = (res['prix_total'] ?? "").toString();
+                : LayoutBuilder(
+                    builder: (context, c) {
+                      final isSmall = c.maxWidth < 700;
 
-                        // ✅ أهم نقطة: نأخذ ticket_url من السيرفر
-                        final ticketUrl = (res['ticket_url'] ?? "").toString().trim();
-                        final canDownload = ticketUrl.isNotEmpty;
-
-                        return DataRow(cells: [
-                          DataCell(Text(res['trajet'].toString())),
-                          DataCell(Text(res['date'].toString())),
-                          DataCell(_buildStatusChip(statut)),
-                          DataCell(_buildPaymentChip(paiement)),
-                          DataCell(Text("$total MRU")),
-                          DataCell(
-                            ElevatedButton.icon(
-                              onPressed: canDownload
-                                  ? () async {
-                                      try {
-                                        await TicketDownloader.downloadAndOpenPdf(
-                                          context: context,
-                                          url: ticketUrl,
-                                          fileName: "ticket_${res['id']}.pdf",
-                                        );
-                                      } catch (e) {
-                                        if (!mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text("Erreur téléchargement: $e")),
-                                        );
-                                      }
-                                    }
-                                  : null,
-                              icon: const Icon(Icons.picture_as_pdf),
-                              label: Text(canDownload ? "Télécharger" : "En attente"),
-                            ),
+                      if (filteredData.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            "Aucune réservation.",
+                            style: TextStyle(fontWeight: FontWeight.w800),
                           ),
-                        ]);
-                      }).toList(),
-                    ),
+                        );
+                      }
+
+                      // ✅ Small: Cards
+                      if (isSmall) {
+                        return ListView.separated(
+                          itemCount: filteredData.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, i) {
+                            final res = filteredData[i];
+                            final statut = (res['statut'] ?? "").toString();
+                            final paiement = (res['statut_paiement'] ?? "").toString();
+                            final total = (res['prix_total'] ?? "").toString();
+                            final ticketUrl = (res['ticket_url'] ?? "").toString().trim();
+                            final canDownload = ticketUrl.isNotEmpty;
+
+                            return SoftCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    res['trajet'].toString(),
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Date: ${res['date']}",
+                                    style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _buildStatusChip(statut),
+                                      _buildPaymentChip(paiement),
+                                      Chip(
+                                        label: Text(
+                                          "$total MRU",
+                                          style: TextStyle(
+                                            color: AppTheme.primary,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        backgroundColor: AppTheme.primary.withOpacity(.10),
+                                        side: BorderSide(color: AppTheme.primary.withOpacity(.35)),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: canDownload
+                                          ? () async {
+                                              try {
+                                                await TicketDownloader.downloadAndOpenPdf(
+                                                  context: context,
+                                                  url: ticketUrl,
+                                                  fileName: "ticket_${res['id']}.pdf",
+                                                );
+                                              } catch (e) {
+                                                if (!mounted) return;
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text("Erreur téléchargement: $e")),
+                                                );
+                                              }
+                                            }
+                                          : null,
+                                      icon: const Icon(Icons.picture_as_pdf),
+                                      label: Text(canDownload ? "Télécharger le ticket" : "En attente"),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }
+
+                      // ✅ Large: DataTable2 (نفس جدولك)
+                      return SoftCard(
+                        child: DataTable2(
+                          columnSpacing: 12,
+                          horizontalMargin: 12,
+                          minWidth: 680,
+                          headingRowHeight: 44,
+                          columns: const [
+                            DataColumn2(label: Text("Trajet"), size: ColumnSize.L),
+                            DataColumn(label: Text("Date")),
+                            DataColumn(label: Text("Statut")),
+                            DataColumn(label: Text("Paiement")),
+                            DataColumn(label: Text("Total")),
+                            DataColumn(label: Text("Ticket")),
+                          ],
+                          rows: filteredData.map((res) {
+                            final statut = (res['statut'] ?? "").toString();
+                            final paiement = (res['statut_paiement'] ?? "").toString();
+                            final total = (res['prix_total'] ?? "").toString();
+
+                            final ticketUrl = (res['ticket_url'] ?? "").toString().trim();
+                            final canDownload = ticketUrl.isNotEmpty;
+
+                            return DataRow(cells: [
+                              DataCell(Text(res['trajet'].toString())),
+                              DataCell(Text(res['date'].toString())),
+                              DataCell(_buildStatusChip(statut)),
+                              DataCell(_buildPaymentChip(paiement)),
+                              DataCell(Text("$total MRU")),
+                              DataCell(
+                                ElevatedButton.icon(
+                                  onPressed: canDownload
+                                      ? () async {
+                                          try {
+                                            await TicketDownloader.downloadAndOpenPdf(
+                                              context: context,
+                                              url: ticketUrl,
+                                              fileName: "ticket_${res['id']}.pdf",
+                                            );
+                                          } catch (e) {
+                                            if (!mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text("Erreur téléchargement: $e")),
+                                            );
+                                          }
+                                        }
+                                      : null,
+                                  icon: const Icon(Icons.picture_as_pdf),
+                                  label: Text(canDownload ? "Télécharger" : "En attente"),
+                                ),
+                              ),
+                            ]);
+                          }).toList(),
+                        ),
+                      );
+                    },
                   ),
           ),
         ],
@@ -167,9 +273,9 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
     }
 
     return Chip(
-      label: Text(status, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w800)),
-      backgroundColor: color.withOpacity(0.12),
-      side: BorderSide(color: color),
+      label: Text(status, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      backgroundColor: color.withOpacity(0.10),
+      side: BorderSide(color: color.withOpacity(.45)),
     );
   }
 
@@ -180,9 +286,9 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
     final color = isPaid ? Colors.green : Colors.orange;
 
     return Chip(
-      label: Text(payment, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w800)),
-      backgroundColor: color.withOpacity(0.12),
-      side: BorderSide(color: color),
+      label: Text(payment, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      backgroundColor: color.withOpacity(0.10),
+      side: BorderSide(color: color.withOpacity(.45)),
     );
   }
 }

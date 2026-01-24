@@ -3,28 +3,323 @@
 
 {% block title %}Ticket de Réservation - SGT{% endblock %}
 
-{% block extra_css %}
+{% block content %}
+
 <style>
-    @media print {
-        .no-print { display: none !important; }
-        .card { border: 1px solid #ddd !important; box-shadow: none !important; }
-        body { background: white !important; }
+    /* ===============================
+       Ticket Premium UI ✅
+       =============================== */
+
+    .ticket-wrap{
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 18px 0;
     }
-    .ticket-border {
-        border-left: 5px dashed #0d6efd;
+
+    .ticket-card{
+        border: 1px solid rgba(15,23,42,.10) !important;
+        border-radius: 18px !important;
+        overflow: hidden !important;
+        background: #fff !important;
+        box-shadow: 0 18px 40px rgba(15,23,42,.10) !important;
+    }
+
+    .ticket-header{
+        background: linear-gradient(135deg, #2563eb, #06b6d4);
+        color: #fff;
+        padding: 18px 20px;
+        text-align: center;
+        position: relative;
+    }
+
+    .ticket-header h4{
+        margin: 0;
+        font-weight: 900;
+        letter-spacing: .5px;
+    }
+    .ticket-header small{
+        opacity: .90;
+        font-weight: 600;
+    }
+
+    /* Left dashed border effect */
+    .ticket-body{
+        position: relative;
+        padding: 22px 22px;
+    }
+    .ticket-body::before{
+        content:"";
+        position:absolute;
+        top:18px;
+        bottom:18px;
+        left:18px;
+        width:5px;
+        border-radius: 999px;
+        background: repeating-linear-gradient(
+            to bottom,
+            #2563eb 0px,
+            #2563eb 8px,
+            transparent 8px,
+            transparent 16px
+        );
+        opacity:.85;
+    }
+
+    .ticket-body-inner{
+        padding-left: 26px;
+    }
+
+    .ticket-section-title{
+        font-weight: 900;
+        color: #0f172a;
+        display:flex;
+        align-items:center;
+        gap: 10px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #e6eef9;
+        padding-bottom: 8px;
+    }
+
+    .ticket-meta{
+        display:flex;
+        justify-content: space-between;
+        align-items:flex-start;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .meta-box{
+        background: #f8fbff;
+        border: 1px solid #e6eef9;
+        border-radius: 14px;
+        padding: 12px 14px;
+        min-width: 220px;
+        flex: 1;
+    }
+
+    .meta-label{
+        font-size: .80rem;
+        color: #64748b;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .10em;
+        margin-bottom: 5px;
+    }
+    .meta-value{
+        font-weight: 900;
+        color:#0f172a;
+        font-size: 1.05rem;
+        margin: 0;
+    }
+    .meta-ref{
+        font-size: 1.25rem;
+        color: #2563eb;
+    }
+
+    /* itinerary box */
+    .itinerary-box{
+        background: #f8fafc;
+        border: 1px solid #e6eef9;
+        border-radius: 16px;
+        padding: 16px 16px;
+        display:flex;
+        justify-content: space-between;
+        align-items:center;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    .it-col{
+        text-align:center;
+        flex:1;
+    }
+
+    .it-col .small{
+        font-size: .80rem;
+        color:#64748b;
+        font-weight: 700;
+    }
+    .it-col .city{
+        font-size: 1.20rem;
+        font-weight: 950;
+        color:#0f172a;
+        margin-top: 3px;
+    }
+
+    .it-arrow{
+        font-size: 2rem;
+        color:#94a3b8;
+        flex:0;
+        width: 60px;
+        text-align:center;
+    }
+
+    /* passenger row */
+    .ticket-grid{
+        display:grid;
+        grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .info-box{
+        background: #ffffff;
+        border: 1px solid #e6eef9;
+        border-radius: 14px;
+        padding: 12px 14px;
+    }
+    .info-box .label{
+        font-size: .82rem;
+        font-weight: 800;
+        color:#64748b;
+        margin-bottom: 6px;
+    }
+    .info-box .value{
+        font-size: 1.02rem;
+        font-weight: 900;
+        color:#0f172a;
+        margin: 0;
+    }
+
+    /* QR column card */
+    .qr-area{
+        border-left: 1px solid #e6eef9;
+        height: 100%;
+        display:flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items:center;
+        padding: 18px 12px;
+        gap: 12px;
+    }
+
+    .qr-card{
+        background: #ffffff;
+        border: 1px solid #e6eef9;
+        border-radius: 16px;
+        padding: 14px 14px;
+        width: 100%;
+        max-width: 260px;
+        text-align:center;
+        box-shadow: 0 10px 20px rgba(15,23,42,.06);
+    }
+
+    #qrcode{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        margin: 0 auto;
+    }
+
+    .status-badge{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-weight: 900;
+        font-size: .95rem;
+        border: 1px solid transparent;
+        width: fit-content;
+    }
+
+    .status-ok{
+        background: rgba(22,163,74,.12);
+        border-color: rgba(22,163,74,.25);
+        color: #166534;
+    }
+
+    .status-wait{
+        background: rgba(245,158,11,.15);
+        border-color: rgba(245,158,11,.28);
+        color: #92400e;
+    }
+
+    .tx-box{
+        color:#64748b;
+        font-size: .86rem;
+        font-weight: 700;
+        margin:0;
+    }
+    .tx-box strong{ color:#0f172a; }
+
+    .ticket-footer{
+        background: #ffffff;
+        border-top: 1px solid #e6eef9;
+        padding: 14px 16px;
+        text-align:center;
+    }
+
+    .ticket-footer p{
+        margin:0;
+        color:#64748b;
+        font-weight: 600;
+        font-size: .90rem;
+        line-height: 1.4;
+    }
+
+    /* Buttons row */
+    .ticket-actions{
+        display:flex;
+        justify-content: space-between;
+        align-items:center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+    }
+
+    /* Print rules */
+    @media print {
+        .no-print{ display:none !important; }
+
+        body{
+            background:#fff !important;
+        }
+        .ticket-card{
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+        }
+        .ticket-header{
+            background: #0d6efd !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .ticket-body::before{
+            background: #0d6efd !important;
+        }
+
+        /* shrink padding for print */
+        .ticket-body{ padding: 16px 16px; }
+        .ticket-body-inner{ padding-left: 22px; }
+
+        /* avoid page breaks inside */
+        .ticket-card, .ticket-body, .ticket-footer{
+            page-break-inside: avoid;
+        }
+    }
+
+    /* Mobile */
+    @media (max-width: 992px){
+        .ticket-grid{ grid-template-columns: 1fr; }
+        .qr-area{
+            border-left: none;
+            border-top: 1px solid #e6eef9;
+            width: 100%;
+        }
+        .it-arrow{ width: 40px; }
     }
 </style>
-{% endblock %}
 
-{% block content %}
-<div class="container py-4">
+<div class="ticket-wrap">
 
-    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <!-- Actions -->
+    <div class="ticket-actions no-print">
         <a href="{% url 'liste_reservations' %}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Retour
         </a>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <button onclick="window.print()" class="btn btn-primary">
                 <i class="bi bi-printer"></i> Imprimer le Ticket
             </button>
@@ -37,99 +332,131 @@
         </div>
     </div>
 
-    <div class="card shadow-sm border-0 overflow-hidden">
-        <div class="card-header bg-primary text-white py-3 text-center">
-            <h4 class="mb-0">TICKET DE VOYAGE - SGT</h4>
+    <div class="ticket-card">
+
+        <!-- Header -->
+        <div class="ticket-header">
+            <h4>TICKET DE VOYAGE - SGT</h4>
             <small>Société de Gestion de Transport</small>
         </div>
 
-        <div class="card-body p-4 ticket-border">
-            <div class="row">
-                <div class="col-md-8">
+        <!-- Body -->
+        <div class="ticket-body">
+            <div class="ticket-body-inner">
+                <div class="row g-3">
 
-                    <div class="row mb-4">
-                        <div class="col-6">
-                            <label class="text-muted small uppercase">Référence</label>
-                            <p class="fw-bold fs-5 text-primary">
-                                #{{ reservation.id_reservation }}{{ reservation.date_reservation|date:"Ymd" }}
-                            </p>
-                        </div>
-                        <div class="col-6 text-end">
-                            <label class="text-muted small">Date d'émission</label>
-                            <p class="fw-bold">{{ reservation.date_reservation|date:"d/m/Y H:i" }}</p>
-                        </div>
-                    </div>
+                    <!-- Left content -->
+                    <div class="col-lg-8">
 
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h5 class="border-bottom pb-2 mb-3">
-                                <i class="bi bi-geo-alt-fill text-danger"></i> Itinéraire
-                            </h5>
+                        <!-- Meta -->
+                        <div class="ticket-meta">
+                            <div class="meta-box">
+                                <div class="meta-label">Référence</div>
+                                <p class="meta-value meta-ref">
+                                    #{{ reservation.id_reservation }}{{ reservation.date_reservation|date:"Ymd" }}
+                                </p>
+                            </div>
 
-                            <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded">
-                                <div class="text-center">
-                                    <span class="d-block text-muted small">Départ</span>
-                                    <span class="fw-bold fs-5">{{ reservation.voyage.trajet.ville_depart }}</span>
-                                </div>
-                                <i class="bi bi-arrow-right fs-3 text-secondary"></i>
-                                <div class="text-center">
-                                    <span class="d-block text-muted small">Arrivée</span>
-                                    <span class="fw-bold fs-5">{{ reservation.voyage.trajet.ville_arrivee }}</span>
-                                </div>
+                            <div class="meta-box text-end">
+                                <div class="meta-label">Date d'émission</div>
+                                <p class="meta-value">
+                                    {{ reservation.date_reservation|date:"d/m/Y H:i" }}
+                                </p>
                             </div>
                         </div>
+
+                        <!-- Itinerary -->
+                        <div class="ticket-section-title">
+                            <i class="bi bi-geo-alt-fill text-danger"></i>
+                            Itinéraire
+                        </div>
+
+                        <div class="itinerary-box">
+                            <div class="it-col">
+                                <div class="small">Départ</div>
+                                <div class="city">{{ reservation.voyage.trajet.ville_depart }}</div>
+                            </div>
+                            <div class="it-arrow">
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <div class="it-col">
+                                <div class="small">Arrivée</div>
+                                <div class="city">{{ reservation.voyage.trajet.ville_arrivee }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Passenger / Seats / Amount -->
+                        <div class="ticket-grid">
+                            <div class="info-box">
+                                <div class="label">Passager</div>
+                                <p class="value">
+                                    {{ reservation.client.get_full_name|default:reservation.client.username }}
+                                </p>
+                            </div>
+
+                            <div class="info-box">
+                                <div class="label">Sièges</div>
+                                <p class="value">{{ reservation.nb_sieges }}</p>
+                            </div>
+
+                            <div class="info-box">
+                                <div class="label">Prix Total</div>
+                                <p class="value">{{ montant_total|floatformat:2 }} MRU</p>
+                            </div>
+                        </div>
+
                     </div>
 
-                    <div class="row">
-                        <div class="col-6">
-                            <label class="text-muted small">Passager</label>
-                            <p class="fw-bold">{{ reservation.client.get_full_name|default:reservation.client.username }}</p>
-                        </div>
-                        <div class="col-3">
-                            <label class="text-muted small">Sièges</label>
-                            <p class="fw-bold">{{ reservation.nb_sieges }}</p>
-                        </div>
-                        <div class="col-3">
-                            <label class="text-muted small">Prix Total</label>
-                            <strong>{{ montant_total|floatformat:2 }} MRU</strong>
+                    <!-- Right QR -->
+                    <div class="col-lg-4">
+                        <div class="qr-area">
+
+                            <div class="qr-card">
+                                <div id="qrcode" class="mb-3"></div>
+
+                                {% if reservation.statut_paiement == "paye" and reservation.statut == "confirmé" %}
+                                    <div class="status-badge status-ok">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        PAIEMENT CONFIRMÉ
+                                    </div>
+                                {% else %}
+                                    <div class="status-badge status-wait">
+                                        <i class="bi bi-hourglass-split"></i>
+                                        EN ATTENTE
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <p class="tx-box text-center">
+                                Transaction ID:<br>
+                                <strong>{{ reservation.transaction_id|default:"-" }}</strong>
+                            </p>
                         </div>
                     </div>
 
                 </div>
-
-                <div class="col-md-4 text-center border-start d-flex flex-column align-items-center justify-content-center">
-                    <div id="qrcode" class="mb-3"></div>
-
-                    {% if reservation.statut_paiement == "paye" and reservation.statut == "confirmé" %}
-                        <div class="badge bg-success fs-6 mb-2">PAIEMENT CONFIRMÉ</div>
-                    {% else %}
-                        <div class="badge bg-warning text-dark fs-6 mb-2">EN ATTENTE</div>
-                    {% endif %}
-
-                    <p class="text-muted small">
-                        Transaction ID:<br>
-                        <strong>{{ reservation.transaction_id|default:"-" }}</strong>
-                    </p>
-                </div>
-
             </div>
         </div>
 
-        <div class="card-footer bg-white py-3 text-center border-top">
-            <p class="text-muted small mb-0">
-                Veuillez vous présenter 30 minutes avant le départ. <br>
+        <!-- Footer -->
+        <div class="ticket-footer">
+            <p>
+                Veuillez vous présenter 30 minutes avant le départ.<br>
                 Ce ticket est personnel et non transférable.
             </p>
         </div>
+
     </div>
 </div>
 
+<!-- QR Code -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-    var qrData = "Ticket ID: {{ reservation.id_reservation }}\n" +
-                 "Voyage: {{ reservation.voyage.trajet }}\n" +
-                 "Passager: {{ reservation.client.username }}\n" +
-                 "Sièges: {{ reservation.nb_sieges }}";
+    var qrData =
+        "Ticket ID: {{ reservation.id_reservation }}\n" +
+        "Voyage: {{ reservation.voyage.trajet }}\n" +
+        "Passager: {{ reservation.client.username }}\n" +
+        "Sièges: {{ reservation.nb_sieges }}";
 
     new QRCode(document.getElementById("qrcode"), {
         text: qrData,
@@ -137,4 +464,5 @@
         height: 128
     });
 </script>
+
 {% endblock %}

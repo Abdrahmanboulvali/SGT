@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'LoginScreen.dart';
 import 'ui/ui_widgets.dart';
+import 'ui/app_theme.dart';
 
 class BookingScreen extends StatefulWidget {
   final int userId;
@@ -210,7 +211,6 @@ class _BookingScreenState extends State<BookingScreen> {
       req.fields["nb_sieges"] = seats.toString();
       req.fields["sieges"] = seats.toString();
 
-      // ملاحظة: هذا فقط للمعلومة، السيرفر لا يعتمد عليه للتحقق
       req.fields["expected_amount"] = _totalToPay().toStringAsFixed(1);
 
       final bytes = await pickedImage!.readAsBytes();
@@ -228,17 +228,11 @@ class _BookingScreenState extends State<BookingScreen> {
 
       if (streamed.statusCode == 200 || streamed.statusCode == 201) {
         if (!mounted) return;
-
-        // ✅ لا يوجد “تحقق تلقائي”
-        // ✅ فقط نخبر الزبون أن الحجز قُدّم وينتظر موافقة المدير
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Réservation envoyée ✅ En attente de validation par le gestionnaire."),
           ),
         );
-
-        // (اختياري) يمكنك هنا تحويله مباشرة لصفحة "Mes réservations"
-        // Navigator.pushReplacement(...);
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -263,178 +257,237 @@ class _BookingScreenState extends State<BookingScreen> {
 
     return SingleChildScrollView(
       child: PageShell(
-        child: SoftCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SectionTitle(
-                "Réservation",
-                subtitle: "Choisissez un voyage et envoyez votre preuve de paiement",
-              ),
+        maxWidth: 720,
+        child: Column(
+          children: [
+            GradientHeader(
+              title: "Réservation",
+              subtitle: "Choisissez un voyage et envoyez votre preuve",
+              icon: Icons.confirmation_number_outlined,
+            ),
+            const SizedBox(height: 14),
 
-              loadingVoyages
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : DropdownButtonFormField<int>(
-                      value: selectedVoyageId,
-                      isExpanded: true,
-                      items: voyages.map((e) {
-                        final idRaw = (e["id"] ?? e["id_voyage"]);
-                        final id = (idRaw is int) ? idRaw : int.parse(idRaw.toString());
-
-                        return DropdownMenuItem<int>(
-                          value: id,
-                          child: Text(
-                            _voyageLabel(e),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() {
-                          selectedVoyageId = val;
-                          _clampSeatsToAvailable();
-                        });
-                      },
-                      decoration: const InputDecoration(
-                        labelText: "Voyage",
-                        prefixIcon: Icon(Icons.alt_route_outlined),
-                      ),
-                    ),
-
-              const SizedBox(height: 10),
-
-              if (!loadingVoyages && left > 0)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    "Places disponibles : $left",
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontWeight: FontWeight.w700,
-                    ),
+            SoftCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SectionTitle(
+                    "Détails",
+                    subtitle: "Sélection • Sièges • Paiement",
                   ),
-                ),
 
-              const SizedBox(height: 12),
-
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                  color: Colors.white,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.event_seat_outlined),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text("Nombre de sièges", style: TextStyle(fontWeight: FontWeight.w800)),
-                    ),
-                    IconButton(
-                      onPressed: seats > 1 ? () => setState(() => seats--) : null,
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    SizedBox(
-                      width: 36,
-                      child: Center(
-                        child: Text(
-                          seats.toString(),
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          if (left > 0 && seats >= left) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Maximum disponible: $left")),
-                            );
-                            seats = left;
-                          } else {
-                            seats++;
-                          }
-                        });
-                      },
-                      icon: const Icon(Icons.add_circle_outline),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              MutedInfoBox(
-                icon: Icons.payments_outlined,
-                title: "Total à payer",
-                subtitle: "${_pricePerSeat().toStringAsFixed(1)} MRU / siège  •  $seats siège(s)",
-                value: "${_totalToPay().toStringAsFixed(1)} MRU",
-              ),
-
-              const SizedBox(height: 14),
-
-              InkWell(
-                onTap: _pickImage,
-                borderRadius: BorderRadius.circular(18),
-                child: Container(
-                  height: 220,
-                  width: double.infinity,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.grey.shade200),
-                    color: Colors.white,
-                  ),
-                  child: (imageBytes == null)
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_a_photo_outlined, size: 44, color: Colors.grey.shade500),
-                            const SizedBox(height: 10),
-                            const Text("Ajouter la preuve de paiement", style: TextStyle(fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 4),
-                            Text("Cliquez pour choisir une image", style: TextStyle(color: Colors.grey.shade600)),
-                          ],
+                  loadingVoyages
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          child: Center(child: CircularProgressIndicator()),
                         )
-                      : Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.memory(imageBytes!, fit: BoxFit.cover),
-                            Positioned(
-                              left: 12,
-                              bottom: 12,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.55),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  "Trajet: $trajet",
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                                ),
+                      : DropdownButtonFormField<int>(
+                          value: selectedVoyageId,
+                          isExpanded: true,
+                          items: voyages.map((e) {
+                            final idRaw = (e["id"] ?? e["id_voyage"]);
+                            final id = (idRaw is int) ? idRaw : int.parse(idRaw.toString());
+
+                            return DropdownMenuItem<int>(
+                              value: id,
+                              child: Text(
+                                _voyageLabel(e),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            )
-                          ],
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              selectedVoyageId = val;
+                              _clampSeatsToAvailable();
+                            });
+                          },
+                          decoration: const InputDecoration(
+                            labelText: "Voyage",
+                            prefixIcon: Icon(Icons.alt_route_outlined),
+                          ),
                         ),
-                ),
-              ),
 
-              const SizedBox(height: 14),
+                  const SizedBox(height: 10),
 
-              PrimaryButton(
-                text: "Confirmer la réservation",
-                icon: Icons.send_outlined,
-                loading: submitting,
-                onPressed: _submit,
+                  if (!loadingVoyages)
+                    Row(
+                      children: [
+                        Icon(Icons.event_seat_outlined, size: 18, color: Colors.grey.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            left > 0 ? "Places disponibles : $left" : "Places disponibles : —",
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (left > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(.10),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              "OK",
+                              style: TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          )
+                      ],
+                    ),
+
+                  const SizedBox(height: 12),
+
+                  // ✅ Seats selector
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.grey.shade200),
+                      color: Colors.white,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(.04),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.event_seat_outlined),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            "Nombre de sièges",
+                            style: TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: seats > 1 ? () => setState(() => seats--) : null,
+                          icon: const Icon(Icons.remove_circle_outline),
+                        ),
+                        SizedBox(
+                          width: 36,
+                          child: Center(
+                            child: Text(
+                              seats.toString(),
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              if (left > 0 && seats >= left) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Maximum disponible: $left")),
+                                );
+                                seats = left;
+                              } else {
+                                seats++;
+                              }
+                            });
+                          },
+                          icon: const Icon(Icons.add_circle_outline),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  MutedInfoBox(
+                    icon: Icons.payments_outlined,
+                    title: "Total à payer",
+                    subtitle: "${_pricePerSeat().toStringAsFixed(1)} MRU / siège  •  $seats siège(s)",
+                    value: "${_totalToPay().toStringAsFixed(1)} MRU",
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // ✅ Upload
+                  InkWell(
+                    onTap: _pickImage,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      height: 220,
+                      width: double.infinity,
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200),
+                        color: Colors.white,
+                      ),
+                      child: (imageBytes == null)
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 62,
+                                  height: 62,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primary.withOpacity(.10),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Icon(Icons.add_a_photo_outlined, size: 28, color: AppTheme.primary),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  "Ajouter la preuve de paiement",
+                                  style: TextStyle(fontWeight: FontWeight.w900),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Cliquez pour choisir une image",
+                                  style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            )
+                          : Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.memory(imageBytes!, fit: BoxFit.cover),
+                                Positioned(
+                                  left: 12,
+                                  bottom: 12,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.55),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      "Trajet: $trajet",
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                )
+                              ],
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  PrimaryButton(
+                    text: "Confirmer la réservation",
+                    icon: Icons.send_outlined,
+                    loading: submitting,
+                    onPressed: _submit,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

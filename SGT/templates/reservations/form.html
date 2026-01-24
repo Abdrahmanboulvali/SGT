@@ -4,26 +4,191 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="fw-bold m-0">
-    <i class="bi bi-ticket-perforated text-primary"></i>
-    Nouvelle réservation
-  </h2>
-</div>
+<style>
+  /* ===============================
+     NEW RESERVATION • PREMIUM FORM ✅
+     (No logic change, only UI)
+     =============================== */
 
-<div class="card shadow-sm border-0">
-  <div class="card-body p-0">
+  .form-wrap{
+    max-width: 980px;
+    margin: 0 auto;
+  }
 
-    <div class="bg-primary text-white px-4 py-3 rounded-top">
+  .page-head{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .page-title{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    margin:0;
+    font-weight: 950;
+    letter-spacing: -.6px;
+    color:#0f172a;
+  }
+
+  .page-title i{
+    width: 44px;
+    height: 44px;
+    display:grid;
+    place-items:center;
+    border-radius: 14px;
+    background: rgba(37,99,235,.10);
+    border: 1px solid rgba(37,99,235,.18);
+    color:#2563eb;
+    font-size: 1.25rem;
+  }
+
+  .form-card{
+    border: 1px solid rgba(15,23,42,.10) !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+    background:#fff !important;
+    box-shadow: 0 18px 40px rgba(15,23,42,.10) !important;
+  }
+
+  .form-card-header{
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    color:#fff;
+    padding: 16px 18px;
+    font-weight: 900;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+
+  .form-card-header i{
+    width: 38px;
+    height: 38px;
+    display:grid;
+    place-items:center;
+    border-radius: 14px;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.22);
+  }
+
+  .form-inner{
+    padding: 18px 18px 20px;
+  }
+
+  .section{
+    background:#ffffff;
+    border: 1px solid #e6eef9;
+    border-radius: 18px;
+    padding: 16px 16px;
+    margin-bottom: 14px;
+  }
+
+  .section-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:0 0 12px 0;
+    font-weight: 950;
+    color:#0f172a;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e6eef9;
+  }
+
+  .section-title i{
+    color:#2563eb;
+    font-size: 1.1rem;
+  }
+
+  .help-text{
+    color:#64748b;
+    font-size: .88rem;
+    font-weight: 600;
+    margin-top: 6px;
+  }
+
+  /* Make inputs nicer (works with Django widgets) */
+  .form-wrap input,
+  .form-wrap select,
+  .form-wrap textarea{
+    border-radius: 12px !important;
+  }
+
+  /* Select2 styling */
+  .select2-container .select2-selection--single{
+    height: 44px !important;
+    border-radius: 12px !important;
+    border: 1px solid #dbe7f6 !important;
+    display:flex !important;
+    align-items:center !important;
+    padding: 0 10px !important;
+  }
+  .select2-container .select2-selection__rendered{
+    line-height: 42px !important;
+    font-weight: 700;
+    color:#0f172a;
+  }
+  .select2-container .select2-selection__arrow{
+    height: 44px !important;
+  }
+  .select2-dropdown{
+    border-radius: 12px !important;
+    border: 1px solid #dbe7f6 !important;
+    overflow:hidden;
+  }
+  .select2-search__field{
+    border-radius: 12px !important;
+    border: 1px solid #dbe7f6 !important;
+  }
+
+  .actions-bar{
+    display:flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  .btn-light{
+    border: 1px solid #dbe7f6 !important;
+    background: #ffffff !important;
+  }
+
+  /* Errors */
+  .error-box{
+    border-radius: 16px;
+    border: 1px solid rgba(239,68,68,.25);
+    background: rgba(239,68,68,.06);
+    padding: 14px 14px;
+    box-shadow: 0 10px 20px rgba(15,23,42,.06);
+  }
+
+</style>
+
+<div class="form-wrap">
+
+  <!-- Header -->
+  <div class="page-head">
+    <h2 class="page-title">
+      <i class="bi bi-ticket-perforated"></i>
+      Nouvelle réservation
+    </h2>
+  </div>
+
+  <div class="form-card">
+
+    <div class="form-card-header">
       <i class="bi bi-plus-circle"></i>
-      Création d'une réservation
+      <span>Création d'une réservation</span>
     </div>
 
-    <div class="p-4">
+    <div class="form-inner">
 
       <!-- ✅ Errors -->
       {% if form.errors %}
-        <div class="alert alert-danger shadow-sm">
+        <div class="error-box mb-3">
           <div class="fw-bold mb-2">
             <i class="bi bi-exclamation-triangle-fill"></i>
             Erreurs dans le formulaire :
@@ -46,67 +211,85 @@
       <form method="POST" novalidate>
         {% csrf_token %}
 
-        <!-- ✅ Client Section -->
-        <div class="row g-3 align-items-end">
+        <!-- =======================
+             SECTION 1 • CLIENT ✅
+             ======================= -->
+        <div class="section">
+          <h5 class="section-title">
+            <i class="bi bi-person-check"></i>
+            Informations client
+          </h5>
 
-          <div class="col-lg-4">
-            <label class="form-label fw-bold">Type client</label>
-            {{ form.client_mode }}
-            <small class="text-muted d-block mt-1">
-              Choisissez client existant ou Autre.
-            </small>
+          <div class="row g-3 align-items-end">
+
+            <div class="col-lg-4">
+              <label class="form-label fw-bold">Type client</label>
+              {{ form.client_mode }}
+              <div class="help-text">
+                Choisissez un client existant ou <b>Autre</b>.
+              </div>
+            </div>
+
+            <div class="col-lg-8" id="existingClientBlock">
+              <label class="form-label fw-bold">Client</label>
+              {{ form.client }}
+              <div class="help-text">
+                Cherchez le client داخل القائمة.
+              </div>
+            </div>
+
           </div>
 
-          <div class="col-lg-8" id="existingClientBlock">
-            <label class="form-label fw-bold">Client</label>
-            {{ form.client }}
-            <small class="text-muted d-block mt-1">
-              Cherchez le Zayoun à l'intérieur de la boite.
-            </small>
-          </div>
+          <!-- Other client -->
+          <div class="row g-3 mt-2" id="otherClientBlock" style="display:none;">
+            <div class="col-lg-6">
+              <label class="form-label fw-bold">Nom du client</label>
+              {{ form.autre_nom }}
+            </div>
 
+            <div class="col-lg-6">
+              <label class="form-label fw-bold">Téléphone</label>
+              {{ form.autre_tel }}
+            </div>
+          </div>
         </div>
 
-        <!-- ✅ New client fields -->
-        <div class="row g-3 mt-2" id="otherClientBlock" style="display:none;">
-          <div class="col-lg-6">
-            <label class="form-label fw-bold">Nom du client</label>
-            {{ form.autre_nom }}
-          </div>
+        <!-- =======================
+             SECTION 2 • RESERVATION ✅
+             ======================= -->
+        <div class="section">
+          <h5 class="section-title">
+            <i class="bi bi-calendar2-check"></i>
+            Détails de la réservation
+          </h5>
 
-          <div class="col-lg-6">
-            <label class="form-label fw-bold">Téléphone</label>
-            {{ form.autre_tel }}
+          <div class="row g-3 align-items-end">
+
+            <div class="col-lg-6">
+              <label class="form-label fw-bold">Voyage</label>
+              {{ form.voyage }}
+              <div class="help-text">
+                Choisissez un voyage disponible.
+              </div>
+            </div>
+
+            <div class="col-lg-3">
+              <label class="form-label fw-bold">Nb sièges</label>
+              {{ form.nb_sieges }}
+            </div>
+
+            <div class="col-lg-3">
+              <label class="form-label fw-bold">Méthode de paiement</label>
+              {{ form.mode_paiement }}
+            </div>
+
           </div>
         </div>
 
-        <hr class="my-4">
-
-        <!-- ✅ Reservation fields -->
-        <div class="row g-3 align-items-end">
-
-          <div class="col-lg-6">
-            <label class="form-label fw-bold">Voyage</label>
-            {{ form.voyage }}
-            <small class="text-muted d-block mt-1">
-              Choisissez un voyage pour enregistrer la réservation.
-            </small>
-          </div>
-
-          <div class="col-lg-3">
-            <label class="form-label fw-bold">Nb sièges</label>
-            {{ form.nb_sieges }}
-          </div>
-
-          <div class="col-lg-3">
-            <label class="form-label fw-bold">Méthode de paiement</label>
-            {{ form.mode_paiement }}
-          </div>
-
-        </div>
-
-        <!-- ✅ Buttons -->
-        <div class="d-flex justify-content-end gap-2 mt-4">
+        <!-- =======================
+             ACTIONS ✅
+             ======================= -->
+        <div class="actions-bar">
           <a href="{% url 'liste_reservations' %}" class="btn btn-light px-4">
             Annuler
           </a>
@@ -121,8 +304,8 @@
 
     </div>
   </div>
-</div>
 
+</div>
 
 <!-- ✅ jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -153,41 +336,30 @@
       const autreTel = document.getElementById("id_autre_tel");
 
       if (other) {
-        // ✅ Hide existing client select
         if (existingBlock) existingBlock.style.display = "none";
-
-        // ✅ Show other fields (row bootstrap => flex)
         if (otherBlock) otherBlock.style.display = "flex";
 
-        // ✅ Disable client select so it won't be required
         if (clientSelect) {
           clientSelect.value = "";
           clientSelect.disabled = true;
         }
 
-        // ✅ Make other fields required
         if (autreNom) autreNom.required = true;
         if (autreTel) autreTel.required = true;
 
       } else {
-        // ✅ Show existing client select
         if (existingBlock) existingBlock.style.display = "block";
-
-        // ✅ Hide other fields
         if (otherBlock) otherBlock.style.display = "none";
 
-        // ✅ Enable client select
         if (clientSelect) {
           clientSelect.disabled = false;
         }
 
-        // ✅ Clear other fields & remove required
         if (autreNom) { autreNom.required = false; autreNom.value = ""; }
         if (autreTel) { autreTel.required = false; autreTel.value = ""; }
       }
     }
 
-    // ✅ Run on load + on change
     document.addEventListener("DOMContentLoaded", function () {
       toggleClientMode();
 
@@ -209,6 +381,5 @@
     }
   });
 </script>
-
 
 {% endblock %}

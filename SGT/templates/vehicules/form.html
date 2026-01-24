@@ -3,86 +3,134 @@
 {% block title %}Véhicule - SGT{% endblock %}
 
 {% block content %}
+
+<!-- ✅ Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-1">
+            <i class="fa-solid fa-truck-front text-primary me-1"></i>
+            {% if form.instance.pk %}Modifier le véhicule{% else %}Nouveau véhicule{% endif %}
+        </h2>
+
+    </div>
+
+    <div class="mt-2 mt-md-0">
+        <a href="{% url 'liste_vehicules' %}" class="btn btn-outline-primary btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> Retour
+        </a>
+    </div>
+</div>
+
+<!-- ✅ Card Form -->
 <div class="row justify-content-center">
     <div class="col-lg-8 col-xl-7">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-primary text-white d-flex align-items-center">
-                <i class="fa-solid fa-bus me-2"></i>
-                <h5 class="mb-0">
-                    {% if form.instance.pk %}Modifier le véhicule{% else %}Nouveau véhicule{% endif %}
-                </h5>
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <strong>
+                        {% if form.instance.pk %}Mise à jour du véhicule{% else %}Création d'un véhicule{% endif %}
+                    </strong>
+                </div>
+                <span class="badge text-bg-light">Formulaire</span>
             </div>
+
             <div class="card-body">
+
+                <!-- ✅ Errors global -->
+                {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <div class="fw-bold mb-1">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                            Erreurs dans le formulaire
+                        </div>
+                        <ul class="mb-0">
+                            {% for err in form.non_field_errors %}
+                                <li>{{ err }}</li>
+                            {% endfor %}
+
+                            {% for field in form %}
+                                {% for err in field.errors %}
+                                    <li><b>{{ field.label }} :</b> {{ err }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
 
                 <form method="post" novalidate>
                     {% csrf_token %}
-                    {{ form.non_field_errors }}
 
-                    <div class="row">
-                        <!-- Matricule -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Matricule *</label>
+                    <div class="row g-3">
+
+                        <!-- ✅ Matricule -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Matricule *</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fa-solid fa-id-card"></i>
                                 </span>
                                 {{ form.matricule }}
                             </div>
-                            {{ form.matricule.errors }}
+                            <div class="text-danger small">{{ form.matricule.errors }}</div>
                         </div>
 
-                        <!-- Type -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Type de véhicule *</label>
+                        <!-- ✅ Type -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Type de véhicule *</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fa-solid fa-van-shuttle"></i>
                                 </span>
                                 {{ form.type }}
                             </div>
-                            {{ form.type.errors }}
+                            <div class="text-danger small">{{ form.type.errors }}</div>
                         </div>
-                    </div>
 
-                    <div class="row">
-                        <!-- Capacité -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Capacité (places) *</label>
+                        <!-- ✅ Capacité -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Capacité (places) *</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fa-solid fa-users"></i>
                                 </span>
                                 {{ form.capacite }}
                             </div>
-                            {{ form.capacite.errors }}
+                            <div class="text-danger small">{{ form.capacite.errors }}</div>
                         </div>
 
-                        <!-- Kilométrage -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Kilométrage total</label>
+                        <!-- ✅ Kilométrage -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Kilométrage total</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fa-solid fa-road"></i>
                                 </span>
                                 {{ form.kilometrage_total }}
                             </div>
-                            {{ form.kilometrage_total.errors }}
+                            <div class="text-danger small">{{ form.kilometrage_total.errors }}</div>
                         </div>
+
                     </div>
 
-                    <div class="d-flex justify-content-end mt-3">
-                        <a href="{% url 'liste_vehicules' %}" class="btn btn-outline-secondary me-2">
+                    <!-- ✅ Buttons -->
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'liste_vehicules' %}" class="btn btn-light px-4">
                             Annuler
                         </a>
-                        <button type="submit" class="btn btn-primary">
+
+                        <button type="submit" class="btn btn-primary px-4">
                             <i class="fa-solid fa-floppy-disk me-1"></i>
                             Enregistrer
                         </button>
                     </div>
+
                 </form>
 
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}

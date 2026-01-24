@@ -3,8 +3,27 @@
 {% block title %}Voyage - SGT{% endblock %}
 
 {% block content %}
+
+<!-- ✅ Page Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="mb-1 fw-bold">
+            <i class="fa-solid fa-ticket me-2 text-primary"></i>
+            {% if form.instance.pk %}Modifier le voyage{% else %}Planifier un nouveau voyage{% endif %}
+        </h2>
+
+    </div>
+
+    <div class="mt-2 mt-md-0">
+        <a href="{% url 'liste_voyages' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> Retour
+        </a>
+    </div>
+</div>
+
 <div class="row justify-content-center">
     <div class="col-lg-9 col-xl-8">
+
         <div class="card shadow-sm border-0">
             <div class="card-header bg-primary text-white d-flex align-items-center">
                 <i class="fa-solid fa-ticket me-2"></i>
@@ -12,9 +31,10 @@
                     {% if form.instance.pk %}Modifier le voyage{% else %}Planifier un nouveau voyage{% endif %}
                 </h5>
             </div>
+
             <div class="card-body">
 
-                <form method="post">
+                <form method="post" novalidate>
                     {% csrf_token %}
 
                     {% if form.non_field_errors %}
@@ -23,6 +43,7 @@
                         </div>
                     {% endif %}
 
+                    <!-- ✅ Row 1 -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Trajet <span class="text-danger">*</span></label>
@@ -43,6 +64,7 @@
                         </div>
                     </div>
 
+                    <!-- ✅ Row 2 -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Chauffeur <span class="text-danger">*</span></label>
@@ -61,12 +83,14 @@
                                 <span class="input-group-text">MRU</span>
                             </div>
                             <div class="text-danger small mt-1">{{ form.prix_par_siege.errors }}</div>
+
                             <div class="form-text text-primary fw-bold">
                                 Calculé automatiquement : 1,5 MRU/Km (Modifiable)
                             </div>
                         </div>
                     </div>
 
+                    <!-- ✅ Row 3 -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Date de départ <span class="text-danger">*</span></label>
@@ -87,19 +111,25 @@
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end mt-4">
-                        <a href="{% url 'liste_voyages' %}" class="btn btn-outline-secondary me-2">
+                    <hr class="my-4">
+
+                    <!-- ✅ Actions -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'liste_voyages' %}" class="btn btn-outline-secondary">
                             <i class="fa-solid fa-xmark me-1"></i> Annuler
                         </a>
+
                         <button type="submit" class="btn btn-primary">
                             <i class="fa-solid fa-floppy-disk me-1"></i>
                             {% if form.instance.pk %}Mettre à jour{% else %}Enregistrer{% endif %}
                         </button>
                     </div>
+
                 </form>
 
             </div>
         </div>
+
     </div>
 </div>
 
@@ -108,8 +138,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const trajetSelect = document.getElementById("id_trajet");
     const prixInput = document.getElementById("id_prix_par_siege");
 
-    // إضافة كلاس Bootstrap تلقائيًا
-    document.querySelectorAll('input, select').forEach(field => {
+    // ✅ Important: طبّق الكلاسات فقط على عناصر الفورم داخل الصفحة
+    document.querySelectorAll('form input, form select, form textarea').forEach(field => {
         if (!field.classList.contains('form-control') && !field.classList.contains('form-select')) {
             field.classList.add(field.tagName === 'SELECT' ? 'form-select' : 'form-control');
         }
@@ -176,4 +206,5 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 </script>
+
 {% endblock %}
