@@ -35,6 +35,22 @@ from .forms import (
 User = get_user_model()
 
 
+from django.db.models import Func, IntegerField, TextField
+from django.db import DatabaseError, transaction
+
+class SgtSiegesReserves(Func):
+    function = "public.sgt_sieges_reserves"
+    output_field = IntegerField()
+
+class SgtSiegesDisponibles(Func):
+    function = "public.sgt_sieges_disponibles"
+    output_field = IntegerField()
+
+class SgtCheckStatutVoyage(Func):
+    function = "public.sgt_check_statut_voyage"
+    output_field = TextField()
+
+
 # =========================
 # OCR (تحقق الدفع بالصورة)
 # =========================
@@ -679,31 +695,25 @@ def api_trajet_info(request, id_trajet):
 
 @login_required
 def liste_voyages(request):
-    now = timezone.now()
-    threshold = now + timedelta(minutes=30)
-
-    voyages = Voyage.objects.all().order_by('-date_depart', '-heure_depart')
+    voyages = (
+        Voyage.objects
+        .select_related("trajet", "vehicule")
+        .annotate(
+            seats_left=SgtSiegesDisponibles(F("id_voyage")),
+            statut_db=SgtCheckStatutVoyage(F("id_voyage")),
+        )
+        .order_by("-date_depart", "-heure_depart")
+    )
 
     voyage_data = []
     for v in voyages:
-        reserved = (
-            Reservation.objects
-            .filter(voyage=v)
-            .exclude(statut="annulé")
-            .aggregate(s=Sum("nb_sieges"))["s"] or 0
-        )
-        seats_left = max(v.vehicule.capacite - reserved, 0)
-
-        is_time_ok = (
-            (v.date_depart > threshold.date()) or
-            (v.date_depart == threshold.date() and v.heure_depart > threshold.time())
-        )
-        is_open = (seats_left > 0) and is_time_ok
+        is_open = (v.statut_db == "OUVERT")
 
         voyage_data.append({
             "obj": v,
-            "seats_left": seats_left,
+            "seats_left": int(v.seats_left or 0),
             "is_open": is_open,
+            "statut": v.statut_db,
         })
 
     return render(request, "voyages/liste.html", {"voyage_data": voyage_data})
@@ -984,20 +994,17 @@ def api_get_voyages_mobile(request):
     voyages = (
         Voyage.objects.select_related("trajet", "vehicule")
         .filter(date_depart__gte=today)
+        .annotate(
+            statut_db=SgtCheckStatutVoyage(F("id_voyage")),
+            places_dispo=SgtSiegesDisponibles(F("id_voyage")),
+        )
         .order_by("date_depart", "heure_depart")
     )
 
     data = []
     for v in voyages:
-        if v.check_statut != "OUVERT":
+        if v.statut_db != "OUVERT":
             continue
-
-        reserved = (
-            Reservation.objects.filter(voyage=v)
-            .exclude(statut="annulé")
-            .aggregate(s=Sum("nb_sieges"))["s"] or 0
-        )
-        seats_left = max(v.vehicule.capacite - reserved, 0)
 
         data.append({
             "id": v.id_voyage,
@@ -1005,10 +1012,11 @@ def api_get_voyages_mobile(request):
             "prix_par_siege": float(v.prix_par_siege or 0),
             "date": v.date_depart.strftime("%Y-%m-%d"),
             "heure": v.heure_depart.strftime("%H:%M"),
-            "places_dispo": seats_left,
+            "places_dispo": int(v.places_dispo or 0),
         })
 
     return JsonResponse(data, safe=False)
+
 
 
 # ✅ NEW/UPDATED فقط
@@ -1197,37 +1205,45 @@ def ajouter_reservation(request):
 
         if form.is_valid():
             client_mode = form.cleaned_data.get("client_mode")
-            client = form.cleaned_data.get("client")   # ✅ قد تكون None
+            client = form.cleaned_data.get("client")
             autre_nom = form.cleaned_data.get("autre_nom")
             autre_tel = form.cleaned_data.get("autre_tel")
             voyage = form.cleaned_data.get("voyage")
             nb_sieges = form.cleaned_data.get("nb_sieges")
-            mode_paiement = form.cleaned_data.get("mode_paiement")  # ✅ الصحيح
+            mode_paiement = form.cleaned_data.get("mode_paiement")
 
-            r = Reservation.objects.create(
-                client=client,              # None إذا Autre
-                autre_nom=autre_nom if client_mode == "other" else None,
-                autre_tel=autre_tel if client_mode == "other" else None,
-                voyage=voyage,
-                nb_sieges=nb_sieges,
-                cree_par=request.user
-            )
+            try:
+                with transaction.atomic():
+                    r = Reservation(
+                        client=client,
+                        autre_nom=autre_nom if client_mode == "other" else None,
+                        autre_tel=autre_tel if client_mode == "other" else None,
+                        voyage=voyage,
+                        nb_sieges=nb_sieges,
+                        cree_par=request.user
+                    )
 
-            # ✅ إذا عندك حقل اسمه mode_paiement في Reservation خزنه
-            if hasattr(r, "mode_paiement"):
-                r.mode_paiement = mode_paiement
+                    if hasattr(r, "mode_paiement"):
+                        r.mode_paiement = mode_paiement
 
-            # ✅ تأكيد مباشر لحجوزات الويب (عدّل حسب أسماء حقولك)
-            if hasattr(r, "statut"):
-                r.statut = "confirmé"
 
-            if hasattr(r, "statut_paiement"):
-                r.statut_paiement = "paye"
+                    r.statut = "confirmé"
+                    r.statut_paiement = "paye"
 
-            r.save()
+                    r.save()
 
-            messages.success(request, "✅ Réservation ajoutée avec succès.")
-            return redirect("liste_reservations")
+                messages.success(request, "✅ Réservation ajoutée avec succès.")
+                return redirect("liste_reservations")
+
+            except DatabaseError as e:
+                msg = str(e)
+
+                if "Complet" in msg:
+                    messages.error(request, "La voyage est complet, il n'y a pas assez de places.")
+                elif "Voyage fermé" in msg:
+                    messages.error(request, "La voyage fermée (moins de 30 minutes restantes).")
+                else:
+                    messages.error(request, f"Erreur lors de la création de la réservation: {msg}")
 
     else:
         form = ReservationWebForm()
@@ -1407,19 +1423,19 @@ def api_ajouter_reservation_mobile(request):
                 filename = f"{uuid.uuid4().hex}.jpg"
                 r.preuve_paiement.save(filename, ContentFile(img_bytes), save=False)
             except Exception:
-                # لا نكسر الحجز، فقط نتركها بدون صورة
+
                 pass
 
-    r.save()
-
-    return JsonResponse(
-        {
-            "status": "success",
-            "message": "Réservation envoyée ✅ En attente de validation par le gestionnaire.",
-            "reservation_id": r.id_reservation,
-        },
-        status=201,
-    )
+    try:
+        with transaction.atomic():
+            r.save()
+    except DatabaseError as e:
+        msg = str(e)
+        if "Complet" in msg:
+            return JsonResponse({"status": "error", "message": "Voyage complet ❌"}, status=409)
+        if "Voyage fermé" in msg:
+            return JsonResponse({"status": "error", "message": "Voyage fermé (<30min) ❌"}, status=409)
+        return JsonResponse({"status": "error", "message": msg}, status=400)
 
 
 # =========================================================
@@ -1754,18 +1770,20 @@ from .serializers import VoyageMobileSerializer
 
 @api_view(["GET"])
 def mobile_voyages(request):
-    """
-    يرجع الرحلات المفتوحة + المقاعد المتاحة
-    """
     today = timezone.localdate()
 
     voyages = (
         Voyage.objects.select_related("trajet", "vehicule")
         .filter(date_depart__gte=today)
+        .annotate(
+            statut_db=SgtCheckStatutVoyage(F("id_voyage")),
+            places_dispo=SgtSiegesDisponibles(F("id_voyage")),
+        )
         .order_by("date_depart", "heure_depart")
     )
 
-    voyages = [v for v in voyages if v.check_statut == "OUVERT"]
+    voyages = [v for v in voyages if v.statut_db == "OUVERT"]
 
     serializer = VoyageMobileSerializer(voyages, many=True)
     return Response(serializer.data)
+

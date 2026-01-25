@@ -6,10 +6,7 @@ class AppTheme {
   static const Color bg = Color(0xFFF6F7FB);
 
   static ThemeData theme() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    );
+    final scheme = ColorScheme.fromSeed(seedColor: primary);
 
     return ThemeData(
       useMaterial3: true,
@@ -17,7 +14,7 @@ class AppTheme {
       scaffoldBackgroundColor: bg,
       colorScheme: scheme,
 
-      // ✅ خطوط افتراضية ممتازة (تعمل بدون أي حزمة)
+      // ✅ خطوط النظام الافتراضية (بدون google_fonts)
       fontFamily: null,
 
       appBarTheme: const AppBarTheme(
@@ -27,9 +24,17 @@ class AppTheme {
         centerTitle: false,
       ),
 
+      // ✅ نصوص أجمل بشكل عام
+      textTheme: const TextTheme(
+        headlineSmall: TextStyle(fontWeight: FontWeight.w900),
+        titleMedium: TextStyle(fontWeight: FontWeight.w800),
+        bodyMedium: TextStyle(fontWeight: FontWeight.w600),
+      ),
+
       cardTheme: CardTheme(
         elevation: 0,
         color: Colors.white,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
 
@@ -55,23 +60,14 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-          backgroundColor: navy,
-          foregroundColor: Colors.white,
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
         ),
       ),
 
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w800),
         side: BorderSide(color: Colors.grey.shade300),
-      ),
-
-      // ✅ تحسين عام للنصوص (اختياري لكنه يعطي شكل أجمل)
-      textTheme: const TextTheme(
-        headlineSmall: TextStyle(fontWeight: FontWeight.w900),
-        titleMedium: TextStyle(fontWeight: FontWeight.w800),
-        bodyMedium: TextStyle(fontWeight: FontWeight.w600),
       ),
     );
   }
