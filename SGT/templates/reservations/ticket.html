@@ -449,7 +449,7 @@
     </div>
 </div>
 
-<!-- QR Code -->
+{% if not pdf_mode %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     var qrData =
@@ -464,5 +464,6 @@
         height: 128
     });
 </script>
+{% endif %}
 
 {% endblock %}

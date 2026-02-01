@@ -165,6 +165,13 @@
     box-shadow: 0 10px 20px rgba(15,23,42,.06);
   }
 
+  /* مهم: خلي select يتمدد داخل input-group */
+  .input-group select{
+    flex: 1 1 auto;
+    width: 1%;
+    min-width: 0;
+  }
+
 </style>
 
 <div class="form-wrap">
@@ -280,8 +287,39 @@
 
             <div class="col-lg-3">
               <label class="form-label fw-bold">Méthode de paiement</label>
-              {{ form.mode_paiement }}
-            </div>
+
+              <div class="input-group w-100">
+                <span class="input-group-text"><i class="bi bi-cash-coin"></i></span>
+
+
+                {% if form.methode_paiement %}
+                  {{ form.methode_paiement }}
+
+
+                {% elif form.mode_paiement %}
+                  {{ form.mode_paiement }}
+
+                {% else %}
+                  <select name="methode_paiement" id="id_methode_paiement" class="form-select">
+                    <option value="">— Sélectionner —</option>
+                    <option value="cash">Espèces (Cash)</option>
+                    <option value="bankily">Bankily</option>
+                    <option value="masrvi">Masrvi</option>
+                    <option value="sadad">Sadad</option>
+                    <option value="bimbank">BimBank</option>
+                    <option value="moov_money">Moov Money</option>
+                    <option value="gaza_pay">Gaza Pay</option>
+                  </select>
+                  <input type="hidden" name="_mp_fallback" value="1">
+                {% endif %}
+              </div>
+
+  {% if form.methode_paiement %}
+    <div class="text-danger small mt-1">{{ form.methode_paiement.errors }}</div>
+  {% endif %}
+</div>
+
+
 
           </div>
         </div>

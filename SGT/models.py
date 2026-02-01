@@ -165,6 +165,7 @@ class Voyage(models.Model):
         return (
             f"{self.trajet.ville_depart} -> {self.trajet.ville_arrivee} | "
             f"{self.date_depart.strftime('%Y-%m-%d')} {self.heure_depart.strftime('%H:%M')} | "
+            f"Vehicule: {self.vehicule.matricule} - {self.vehicule.type} | "
             f"Places dispo: {self.sieges_disponibles}"
         )
 
@@ -177,11 +178,11 @@ class Reservation(models.Model):
         null=True, blank=True
     )
 
-    # ✅ بيانات الزبون الخارجي (Autre)
+
     autre_nom = models.CharField(max_length=120, null=True, blank=True)
     autre_tel = models.CharField(max_length=30, null=True, blank=True)
 
-    # ✅ من أنشأ الحجز (مدير/عميل)
+
     cree_par = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -207,7 +208,22 @@ class Reservation(models.Model):
     preuve_paiement = models.ImageField(upload_to='paiements/', null=True, blank=True)
     transaction_id = models.CharField(max_length=100, null=True, blank=True, unique=True)
     statut_paiement = models.CharField(max_length=20, default='en_attente')
+    METHODE_PAIEMENT_CHOICES = [
+        ("bankily", "Bankily"),
+        ("masrvi", "Masrvi"),
+        ("sedad", "Sedad"),
+        ("ghaza_pay", "Ghaza Pay"),
+        ("bii", "Bii"),
+        ("moov_money", "Moov Money"),
+    ]
 
+    methode_paiement = models.CharField(
+        max_length=30,
+        choices=METHODE_PAIEMENT_CHOICES,
+        default="bankily",
+        blank=True,
+        null=True
+    )
     class Meta:
         db_table = 'reservation'
         managed = True
@@ -262,3 +278,32 @@ class Reservation(models.Model):
 
         self.full_clean()
         super().save(*args, **kwargs)
+
+from django.db import models
+
+class PaymentOption(models.Model):
+
+    code = models.SlugField(max_length=50, unique=True)
+    label = models.CharField(max_length=60)
+    phone_number = models.CharField(max_length=30)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "label"]
+
+    def __str__(self):
+        return f"{self.label} ({self.phone_number})"
+
+
+class CompanyContact(models.Model):
+
+    whatsapp_number = models.CharField(max_length=30, blank=True, default="")
+
+    def save(self, *args, **kwargs):
+
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"WhatsApp: {self.whatsapp_number or '—'}"

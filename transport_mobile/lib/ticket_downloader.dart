@@ -1,9 +1,8 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-// ✅ استيراد شرطي حسب المنصة
+
 import 'ticket_downloader_io.dart'
     if (dart.library.html) 'ticket_downloader_web.dart' as platform;
 

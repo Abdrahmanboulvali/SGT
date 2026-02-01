@@ -67,21 +67,21 @@ urlpatterns = [
     path("api/mobile/register/", views.api_register_mobile, name="api_register_mobile"),
     path("api/mobile/voyages/", views.api_get_voyages_mobile, name="api_get_voyages_mobile"),
 
-    # ✅ المسار الذي كان يضرب عليه Flutter (بدون 404)
+
     path("api/mobile/reservations/", views.api_ajouter_reservation_mobile, name="api_mobile_reservations"),
 
-    # ✅ مسار قديم إذا كنت تستعمله في Flutter (Alias)
+
     path("api/mobile/reservations/create/", views.api_ajouter_reservation_mobile, name="api_mobile_reservations_create"),
 
-    # ✅ عرض حجوزات مستخدم
+
     path("api/mobile/mes-reservations/<int:user_id>/", views.api_mes_reservations_mobile, name="api_mes_reservations_mobile"),
 
-    # ✅ Alias قديم (لو كان Flutter يستعمله)
+
     path("api/mobile/reservations/<int:user_id>/", views.api_mes_reservations_mobile, name="api_mobile_reservations_by_user"),
 
     # PDF Ticket Mobile
     path("api/mobile/ticket/<int:id_reservation>/", views.api_mobile_ticket_pdf, name="api_mobile_ticket_pdf"),
 
     path("api/web/clients/search/", views.api_web_clients_search, name="api_web_clients_search"),
-
+    path("api/mobile/payment-options/", views.api_mobile_payment_options, name="api_mobile_payment_options"),
 ]

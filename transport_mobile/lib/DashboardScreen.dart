@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'booking_screen.dart';
 import 'MyReservations.dart';
 import 'LoginScreen.dart';
-import 'ui/ui_widgets.dart';
 import 'ui/app_theme.dart';
 
 class DashboardScreen extends StatefulWidget {

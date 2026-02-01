@@ -160,6 +160,12 @@ class VoyageForm(forms.ModelForm):
             'prix_par_siege': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['vehicule'].label_from_instance = lambda v: f"{v.matricule} - {v.type}"
+
+
 class ReservationForm(forms.ModelForm):
     preuve_paiement = forms.ImageField(
         required=False,
@@ -169,40 +175,39 @@ class ReservationForm(forms.ModelForm):
 
     class Meta:
         model = Reservation
-        fields = ['client', 'voyage', 'nb_sieges', 'statut', 'preuve_paiement']
+        fields = [
+            'client',
+            'voyage',
+            'nb_sieges',
+            'methode_paiement',
+            'statut',
+            'preuve_paiement'
+        ]
         widgets = {
             'client': forms.Select(attrs={'class': 'form-select'}),
             'voyage': forms.Select(attrs={'class': 'form-select'}),
             'nb_sieges': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'methode_paiement': forms.Select(attrs={'class': 'form-select'}),
             'statut': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
-        super(ReservationForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['statut'].required = False
+
         today = timezone.now().date()
         self.fields['voyage'].queryset = Voyage.objects.filter(
             date_depart__gte=today
         ).order_by('date_depart', 'heure_depart')
+
         self.fields['client'].empty_label = "Sélectionnez un client..."
         self.fields['voyage'].empty_label = "Sélectionnez un voyage..."
 
-from django import forms
-from django.contrib.auth import get_user_model
-from django.utils.translation import gettext_lazy as _
 
-from .models import Reservation, Voyage
 
 
 import re
-from datetime import datetime, timedelta
 
-from django import forms
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-
-from .models import Reservation, Voyage
 
 
 def _to_int(x):
@@ -328,10 +333,17 @@ class ReservationWebForm(forms.ModelForm):
 
     mode_paiement = forms.ChoiceField(
         choices=[
+
             ("cash", "Espèces (Cash)"),
+
             ("bankily", "Bankily"),
             ("masrvi", "Masrvi"),
+            ("sadad", "Sadad"),
+            ("bimbank", "BimBank"),
+            ("moov_money", "Moov Money"),
+            ("gaza_pay", "Gaza Pay"),
         ],
+
         required=True,
         widget=forms.Select(attrs={"class": "form-select"})
     )

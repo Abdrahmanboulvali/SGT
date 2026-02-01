@@ -24,6 +24,7 @@ dependencies:
   # المكتبات المطلوبة لمشروعك (تأكد من وجود نسخة واحدة فقط من كل منها)
   http: ^1.1.0
   image_picker: ^1.1.2
+  url_launcher: ^6.3.1
   file_picker: ^8.1.2
   jwt_decoder: ^2.0.1
   shared_preferences: ^2.5.3
