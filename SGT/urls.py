@@ -84,4 +84,9 @@ urlpatterns = [
 
     path("api/web/clients/search/", views.api_web_clients_search, name="api_web_clients_search"),
     path("api/mobile/payment-options/", views.api_mobile_payment_options, name="api_mobile_payment_options"),
+
+
+    path("api/chauffeur/voyages/", views.chauffeur_voyages, name="chauffeur_voyages"),
+    path("api/mobile/chauffeur/voyages/", views.api_chauffeur_voyages, name="api_chauffeur_voyages"),
+
 ]

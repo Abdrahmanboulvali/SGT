@@ -6,6 +6,7 @@
 <h2 class="mb-4">Gestion des comptes utilisateurs</h2>
 
 <div class="row">
+    <!-- ====== EN ATTENTE ====== -->
     <div class="col-md-5">
         <div class="card shadow-sm border-warning mb-4">
             <div class="card-header bg-warning text-dark">
@@ -49,6 +50,7 @@
         </div>
     </div>
 
+    <!-- ====== ACTIFS ====== -->
     <div class="col-md-7">
         <div class="card shadow-sm border-success">
             <div class="card-header bg-success text-white">
@@ -59,9 +61,11 @@
                     <thead class="table-light">
                         <tr>
                             <th>Utilisateur</th>
-                            <th>Rôle</th> <th>Actions</th>
+                            <th>Rôle</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody>
                     {% for u in utilisateurs_actifs %}
                         <tr>
@@ -70,25 +74,55 @@
                                 <small class="text-muted">{{ u.email }}</small>
                             </td>
 
+                            <!-- ====== ROLE DROPDOWN ====== -->
                             <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        {% if u.role == 'CHAUFFEUR' %}
-                                            <i class="fa-solid fa-id-card"></i> Chauffeur
-                                        {% elif u.role == 'AGENT' %}
-                                            <i class="fa-solid fa-user-tie"></i> Agent
-                                        {% else %}
-                                            <i class="fa-solid fa-user"></i> Client
-                                        {% endif %}
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><h6 class="dropdown-header">Changer le rôle</h6></li>
-                                        <li><a class="dropdown-item" href="{% url 'changer_role' u.id 'CLIENT' %}">Client</a></li>
-                                        <li><a class="dropdown-item" href="{% url 'changer_role' u.id 'AGENT' %}">Agent</a></li>
-                                    </ul>
-                                </div>
+                                {% if u.role == 'ADMIN' %}
+                                    <span class="badge bg-dark"><i class="fa-solid fa-user-gear me-1"></i> Admin</span>
+                                {% elif u.role == 'SUPERVISEUR' %}
+                                    <span class="badge bg-secondary"><i class="fa-solid fa-shield-halved me-1"></i> Superviseur</span>
+                                {% else %}
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle"
+                                                type="button" data-bs-toggle="dropdown">
+                                            {% if u.role == 'CHAUFFEUR' %}
+                                                <i class="fa-solid fa-id-card"></i> Chauffeur
+                                            {% elif u.role == 'AGENT' %}
+                                                <i class="fa-solid fa-user-tie"></i> Agent
+                                            {% else %}
+                                                <i class="fa-solid fa-user"></i> Client
+                                            {% endif %}
+                                        </button>
+
+                                        <ul class="dropdown-menu">
+                                            <li><h6 class="dropdown-header">Changer le rôle</h6></li>
+
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{% url 'changer_role' u.id 'CLIENT' %}">
+                                                    Client
+                                                </a>
+                                            </li>
+
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{% url 'changer_role' u.id 'AGENT' %}">
+                                                    Agent
+                                                </a>
+                                            </li>
+
+                                            <!-- ✅ NEW: Chauffeur -->
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{% url 'changer_role' u.id 'CHAUFFEUR' %}">
+                                                    Chauffeur
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                {% endif %}
                             </td>
 
+                            <!-- ====== ACTIONS ====== -->
                             <td>
                                 <a href="{% url 'desactiver_compte' u.id %}"
                                    class="btn btn-sm btn-warning"
@@ -96,6 +130,7 @@
                                    onclick="return confirm('Désactiver ce compte ?');">
                                     <i class="fa-solid fa-ban"></i>
                                 </a>
+
                                 <a href="{% url 'supprimer_compte' u.id %}"
                                    class="btn btn-sm btn-danger"
                                    title="Supprimer"
@@ -104,6 +139,7 @@
                                 </a>
                             </td>
                         </tr>
+
                     {% empty %}
                         <tr>
                             <td colspan="4" class="text-center py-3 text-muted">
@@ -112,6 +148,7 @@
                         </tr>
                     {% endfor %}
                     </tbody>
+
                 </table>
             </div>
         </div>

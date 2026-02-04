@@ -220,9 +220,8 @@ def _to_int(x):
 
 
 def _extract_places_from_string(s: str):
-    """
-    يقرأ Places dispo: 13 من نص __str__()
-    """
+
+
     if not s:
         return None
     m = re.search(r"Places\s*dispo\s*:\s*(\d+)", s, re.IGNORECASE)
@@ -368,12 +367,12 @@ class ReservationWebForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # ✅ Clients (فقط الزبناء، بدون superuser)
+
         self.fields["client"].queryset = User.objects.filter(is_superuser=False).order_by("username")
         self.fields["client"].required = False
         self.fields["client"].empty_label = "— Sélectionner un client —"
 
-        # ✅ شكل label: رقم - اسم
+
         def client_label(u):
             fn = (u.first_name or "").strip()
             ln = (u.last_name or "").strip()
@@ -382,26 +381,23 @@ class ReservationWebForm(forms.ModelForm):
 
         self.fields["client"].label_from_instance = client_label
 
-        # ✅ Voyages: فقط الرحلات المفتوحة (حسب check_statut + المقاعد)
+
         self.fields["voyage"].empty_label = "— Sélectionner un voyage —"
         self.fields["voyage"].queryset = self.get_open_voyages()
 
     def get_open_voyages(self):
-        """
-        ✅ يعرض فقط الرحلات المفتوحة:
-        - ليست مغلقة بالوقت (<30 دقيقة)
-        - ليست ممتلئة (sieges_disponibles > 0)
-        """
+
+
         qs = Voyage.objects.select_related("vehicule", "trajet").order_by("date_depart", "heure_depart")
 
         allowed = []
         for v in qs:
-            # ✅ إذا عندك check_statut (كما أرسلت في model)
+
             if hasattr(v, "check_statut"):
                 if v.check_statut != "OUVERT":
                     continue
 
-            # ✅ شرط المقاعد
+
             if hasattr(v, "sieges_disponibles"):
                 if int(v.sieges_disponibles) <= 0:
                     continue
@@ -426,18 +422,18 @@ class ReservationWebForm(forms.ModelForm):
             if not client:
                 self.add_error("client", "Veuillez sélectionner un client.")
         else:
-            # ✅ Autre => الاسم والهاتف إجباريان
+
             if not autre_nom:
                 self.add_error("autre_nom", "Nom du client obligatoire.")
             if not autre_tel:
                 self.add_error("autre_tel", "Téléphone obligatoire.")
 
-            # ✅ مهم جدًا: لا نجبر client في وضع Autre
+            # ✅ Très important : Nous ne forçons pas le client à passer en mode Autre
             cleaned["client"] = None
 
-        # ✅ Validation voyage (لازم يكون مفتوح + فيه مقاعد)
+        # ✅ Voyage de validation (doit être ouvert + avoir des places disponibles)
         if voyage:
-            # مغلق بالوقت أو ممتلئ
+            # Fermé ou complet
             if hasattr(voyage, "check_statut") and voyage.check_statut != "OUVERT":
                 raise ValidationError("Ce voyage est fermé (complet ou délai < 30min).")
 

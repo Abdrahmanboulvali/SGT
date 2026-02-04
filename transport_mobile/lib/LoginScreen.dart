@@ -7,6 +7,7 @@ import 'DashboardScreen.dart';
 import 'RegisterScreen.dart';
 import 'ui/ui_widgets.dart';
 import 'ui/app_theme.dart';
+import 'ui/DriverTripsScreen.dart'; // صفحة السائق
 
 class ApiConfig {
   static const String baseUrl = "http://127.0.0.1:8000";
@@ -46,22 +47,53 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+
         final userId = data["user_id"] as int;
         final username = (data["username"] ?? u).toString();
+        final role = (data["role"] ?? "CLIENT").toString();
+        final token = (data["token"] ?? "").toString(); // ✅ مهم
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt("user_id", userId);
         await prefs.setString("username", username);
+        await prefs.setString("role", role);
+
+        // ✅ حفظ التوكن إذا موجود
+        if (token.trim().isNotEmpty) {
+          await prefs.setString("token", token.trim());
+        } else {
+          await prefs.remove("token");
+        }
 
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DashboardScreen(userId: userId, username: username),
-          ),
-        );
+
+        // ✅ redirect حسب role
+        if (role == "CHAUFFEUR") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const DriverTripsScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DashboardScreen(userId: userId, username: username),
+            ),
+          );
+        }
       } else {
-        final msg = res.body.isNotEmpty ? res.body : "Identifiants invalides.";
+        String msg = "Identifiants invalides.";
+        try {
+          final decoded = jsonDecode(res.body);
+          if (decoded is Map && decoded["message"] != null) {
+            msg = decoded["message"].toString();
+          } else if (decoded is Map && decoded["detail"] != null) {
+            msg = decoded["detail"].toString();
+          }
+        } catch (_) {
+          if (res.body.isNotEmpty) msg = res.body;
+        }
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
@@ -73,6 +105,13 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _username.dispose();
+    _password.dispose();
+    super.dispose();
   }
 
   @override

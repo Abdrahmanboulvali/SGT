@@ -30,18 +30,19 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # مكتبات الطرف الثالث
+
     'rest_framework',
     'rest_framework.authtoken',
+
     'rest_framework_simplejwt',
     'corsheaders',
 
-    # تطبيقك الخاص
+
     'SGT',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # 🚨 يجب أن يكون هذا السطر هو الأول دائماً!
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -51,10 +52,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# ✅ السماح للمتصفح والموبايل بالوصول للسيرفر
+
 CORS_ALLOW_ALL_ORIGINS = True
 
-# إعدادات الـ REST FRAMEWORK والتوكن
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",

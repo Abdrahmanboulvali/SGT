@@ -2,6 +2,8 @@
 from functools import wraps
 from django.core.exceptions import PermissionDenied
 
+from .models import User, Chauffeur, Voyage
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, get_user_model, authenticate
 from django.contrib.auth.decorators import login_required
@@ -36,7 +38,7 @@ User = get_user_model()
 
 
 from django.db.models import Func, IntegerField, TextField
-from django.db import DatabaseError, transaction
+
 
 class SgtSiegesReserves(Func):
     function = "public.sgt_sieges_reserves"
@@ -51,315 +53,13 @@ class SgtCheckStatutVoyage(Func):
     output_field = TextField()
 
 
-# =========================
-# OCR (تحقق الدفع بالصورة)
-# =========================
-
-_reader = None
-
-def get_reader():
-    """تحميل قارئ OCR مرة واحدة فقط (Lazy Loading)."""
-    global _reader
-    if _reader is None:
-        _reader = easyocr.Reader(['ar', 'en'], gpu=False)
-    return _reader
-
-
-def verify_payment_ocr(image_file, expected_amount, company_phone="37614881"):
-    """
-    يرجع:
-      (ok: bool, transaction_id: str|None)
-
-    ok=True إذا:
-      - رقم الشركة موجود
-      - المبلغ موجود
-      - رقم عملية (transaction_id) موجود
-    """
-    try:
-        if not image_file:
-            return False, None
-
-        image_file.seek(0)
-        img = Image.open(image_file).convert("RGB")
-
-        # تسريع OCR: تصغير الصورة إذا كانت كبيرة
-        img.thumbnail((1400, 1400))
-
-        img_np = np.array(img)
-        results = get_reader().readtext(img_np, detail=0)
-
-        full_text = " ".join(results).lower()
-
-        # استخراج الأرقام
-        all_numbers = re.findall(r"\d+", full_text)
-
-        # تحقق رقم الشركة
-        is_company_ok = (
-            company_phone in all_numbers
-            or any(company_phone in n for n in all_numbers)
-        )
-
-        # تحقق المبلغ (تقريبي)
-        amt_float = float(expected_amount)
-        amt_main = str(int(amt_float))
-        amt_rounded = str(round(amt_float))
-
-        is_amount_ok = (
-            any(amt_main in n for n in all_numbers)
-            or any(amt_rounded in n for n in all_numbers)
-            or str(amt_float) in full_text
-        )
-
-        # =========================
-        # استخراج transaction_id بدون الاعتماد على تاريخ (غير ثابت)
-        # =========================
-        transaction_id = None
-
-        # استبعاد رقم الشركة والمبلغ (حتى لا نلتقطهما كـ transaction_id)
-        blocked = {company_phone, amt_main, amt_rounded}
-
-        # مرشحون: أرقام طويلة (معرّف المعاملة عادةً طويل)
-        candidates = [n for n in all_numbers if len(n) >= 10 and n not in blocked]
-
-        if candidates:
-            # خذ أطول رقم (غالباً هو معرّف المعاملة)
-            transaction_id = max(candidates, key=len)
-        else:
-            # fallback: لو ما في أرقام طويلة، خذ أي رقم بطول >= 8 ليس رقم الشركة
-            fallback = [n for n in all_numbers if len(n) >= 8 and n != company_phone]
-            if fallback:
-                transaction_id = max(fallback, key=len)
-
-        ok = is_company_ok and is_amount_ok and (transaction_id is not None)
-        return ok, transaction_id
-
-    except Exception as e:
-        print(f"OCR Error: {e}")
-        return False, None
-
 
 # =========================
-# ✅ PDF Ticket / Form (للتحميل بعد الحجز) - نسخة جميلة
-# =========================
-
-def _build_ticket_pdf(reservation) -> io.BytesIO:
-    """
-    PDF Ticket محسّن بالشكل (header + card + badge + QR).
-    """
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    W, H = A4
-
-    # ====== ألوان ======
-    BLUE = colors.HexColor("#1677ff")
-    LIGHT_BG = colors.HexColor("#f5f7fb")
-    BORDER = colors.HexColor("#d9e2ef")
-    TEXT = colors.HexColor("#0f172a")
-    MUTED = colors.HexColor("#64748b")
-    GREEN = colors.HexColor("#16a34a")
-
-    # ====== خلفية عامة ======
-    c.setFillColor(LIGHT_BG)
-    c.rect(0, 0, W, H, stroke=0, fill=1)
-
-    # ====== شريط جانبي ======
-    side_w = 1.0 * cm
-    c.setFillColor(colors.HexColor("#0b4fb3"))
-    c.rect(0, 0, side_w, H, stroke=0, fill=1)
-
-    # ====== Header ======
-    header_h = 3.2 * cm
-    c.setFillColor(BLUE)
-    c.roundRect(side_w + 1.2*cm, H - header_h - 1.2*cm, W - side_w - 2.4*cm, header_h, 18, stroke=0, fill=1)
-
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 20)
-    c.drawString(side_w + 2.0*cm, H - 2.2*cm, "TICKET DE VOYAGE - SGT")
-    c.setFont("Helvetica", 11)
-    c.drawString(side_w + 2.0*cm, H - 2.75*cm, "Société de Gestion de Transport")
-
-    # ====== Card ======
-    card_x = side_w + 1.2*cm
-    card_y = 2.2*cm
-    card_w = W - side_w - 2.4*cm
-    card_h = H - header_h - 4.2*cm
-
-    c.setFillColor(colors.white)
-    c.setStrokeColor(BORDER)
-    c.setLineWidth(1)
-    c.roundRect(card_x, card_y, card_w, card_h, 16, stroke=1, fill=1)
-
-    # ====== بيانات ======
-    v = reservation.voyage
-    t = v.trajet
-    total = float(reservation.nb_sieges * v.prix_par_siege) if v.prix_par_siege is not None else 0.0
-
-    left_x = card_x + 1.4*cm
-    top_y = card_y + card_h - 1.3*cm
-
-    right_x = card_x + card_w - 7.2*cm
-    qr_size = 5.2*cm
-
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica", 10)
-    c.drawString(left_x, top_y, "Référence")
-
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 16)
-    ref = f"#{reservation.id_reservation}{v.date_depart.strftime('%Y%m%d')}"
-    c.drawString(left_x, top_y - 0.65*cm, ref)
-
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica", 10)
-    c.drawString(left_x + 9.0*cm, top_y, "Date d'émission")
-
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(left_x + 9.0*cm, top_y - 0.65*cm, f"{reservation.date_reservation.strftime('%d/%m/%Y %H:%M')}")
-
-    c.setStrokeColor(BORDER)
-    c.line(card_x + 1.2*cm, top_y - 1.2*cm, card_x + card_w - 1.2*cm, top_y - 1.2*cm)
-
-    y = top_y - 2.0*cm
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(left_x, y, "Itinéraire")
-
-    box_y = y - 2.1*cm
-    box_h = 2.0*cm
-    c.setFillColor(colors.HexColor("#f8fafc"))
-    c.setStrokeColor(BORDER)
-    c.roundRect(left_x, box_y, card_w - 9.0*cm, box_h, 12, stroke=1, fill=1)
-
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica", 10)
-    c.drawString(left_x + 0.7*cm, box_y + 1.25*cm, "Départ")
-    c.drawString(left_x + (card_w - 9.0*cm)/2 + 0.2*cm, box_y + 1.25*cm, "Arrivée")
-
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(left_x + 0.7*cm, box_y + 0.55*cm, f"{t.ville_depart}")
-    c.drawString(left_x + (card_w - 9.0*cm)/2 + 0.2*cm, box_y + 0.55*cm, f"{t.ville_arrivee}")
-
-    info_y = box_y - 1.6*cm
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica", 10)
-    c.drawString(left_x, info_y + 0.9*cm, "Passager")
-    c.drawString(left_x + 6.0*cm, info_y + 0.9*cm, "Sièges")
-    c.drawString(left_x + 10.0*cm, info_y + 0.9*cm, "Prix Total")
-
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 12)
-    passenger = f"{reservation.client.username}" if hasattr(reservation, "client") and reservation.client else "-"
-    c.drawString(left_x, info_y + 0.35*cm, passenger)
-    c.drawString(left_x + 6.0*cm, info_y + 0.35*cm, str(reservation.nb_sieges))
-    c.drawString(left_x + 10.0*cm, info_y + 0.35*cm, f"{total:.2f} MRU")
-
-    badge_y = info_y - 1.4*cm
-    c.setFillColor(GREEN)
-    c.roundRect(right_x, badge_y + 0.2*cm, qr_size, 0.75*cm, 10, stroke=0, fill=1)
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawCentredString(right_x + qr_size/2, badge_y + 0.47*cm, "PAIEMENT CONFIRMÉ")
-
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica", 9.5)
-    c.drawString(right_x, badge_y - 0.2*cm, "Transaction ID:")
-    c.setFillColor(TEXT)
-    c.setFont("Helvetica-Bold", 10.5)
-    c.drawString(right_x, badge_y - 0.8*cm, f"{reservation.transaction_id or '-'}")
-
-    try:
-        qr_data = f"RES:{reservation.id_reservation}|TID:{reservation.transaction_id or ''}|TOTAL:{total:.2f}|TRAJET:{t.ville_depart}-{t.ville_arrivee}"
-        qr_img = qrcode.make(qr_data)
-
-        qr_buf = io.BytesIO()
-        qr_img.save(qr_buf, format="PNG")
-        qr_buf.seek(0)
-
-        qr_reader = ImageReader(qr_buf)
-        qr_y = top_y - 1.2*cm - qr_size
-        c.drawImage(qr_reader, right_x, qr_y, qr_size, qr_size, mask="auto")
-
-        c.setFillColor(MUTED)
-        c.setFont("Helvetica", 9)
-        c.drawCentredString(right_x + qr_size/2, qr_y - 0.35*cm, "QR Code")
-    except Exception as e:
-        print("QR skipped:", e)
-
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica-Oblique", 10)
-    c.drawString(card_x + 1.4*cm, card_y + 1.0*cm, "Merci pour votre confiance.")
-
-    c.showPage()
-    c.save()
-    buffer.seek(0)
-    return buffer
-
-
-from django.views.decorators.http import require_http_methods
-
-@csrf_exempt
-@require_http_methods(["GET", "POST"])
-def api_mobile_reservations(request):
-    """
-    Endpoint compatible Flutter:
-    - GET  /api/mobile/reservations/?user_id=1  => réservations utilisateur
-    - POST /api/mobile/reservations/           => créer réservation
-    """
-
-    if request.method == "GET":
-        user_id_str = (request.GET.get("user_id") or "").strip()
-
-        # ✅ Évite ValueError: int("null") / int(" ")
-        if not user_id_str.isdigit():
-            return JsonResponse(
-                {"status": "error", "message": "user_id requis et doit être numérique"},
-                status=400
-            )
-
-        return api_mes_reservations_mobile(request, int(user_id_str))
-
-    # POST
-    return api_ajouter_reservation_mobile(request)
-
-
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
-from django.template.loader import render_to_string
-from decimal import Decimal
-
-from django.http import FileResponse, JsonResponse
-from django.shortcuts import get_object_or_404
-
-def api_mobile_ticket_pdf(request, id_reservation):
-    res = get_object_or_404(Reservation, id_reservation=id_reservation)
-
-    if not (res.statut == "confirmé" and res.statut_paiement == "paye"):
-        return JsonResponse({
-            "status": "error",
-            "message": "Ticket disponible uniquement après validation."
-        }, status=403)
-
-    pdf_buffer = _build_ticket_pdf(res)  # ✅ ReportLab (بدون WeasyPrint)
-    filename = f"ticket_{res.id_reservation}.pdf"
-
-    return FileResponse(
-        pdf_buffer,
-        as_attachment=True,
-        filename=filename,
-        content_type="application/pdf",
-    )
-
-# =========================
-# Helpers (صلاحيات)
+# Helpers (pouvoirs)
 # =========================
 
 def is_superviseur(user):
-    """
-    - السماح دائمًا للـ Admin الحقيقي (superuser/staff)
-    - حتى لو كانت قيمة role = CLIENT بالخطأ
-    """
+
     if user.is_superuser or user.is_staff:
         return True
     return getattr(user, "role", "") in ("SUPERVISEUR", "ADMIN", "STAFF")
@@ -401,7 +101,7 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
 
-            # منع الزبون من دخول الويب (لكن اسمح للـ Admin/Staff دائمًا)
+            # Empêcher le client d'accéder au site web (mais toujours autoriser l'administrateur/le personnel).
             if getattr(user, "role", "") == "CLIENT" and not user.is_staff and not user.is_superuser:
                 messages.error(request, "Accès Web interdit pour les clients. Veuillez utiliser l'application mobile.")
                 return render(request, "auth/login.html", {"form": form})
@@ -912,21 +612,346 @@ def supprimer_compte(request, user_id):
 
 @superviseur_required
 def changer_role(request, user_id, new_role):
-    allowed_roles = {"CLIENT", "SUPERVISEUR", "ADMIN", "STAFF"}
+
+    allowed_roles = {"CLIENT", "AGENT", "CHAUFFEUR", "SUPERVISEUR", "ADMIN"}
+
     if new_role not in allowed_roles:
-        messages.error(request, "Rôle Invalide.")
+        messages.error(request, "Rôle invalide.")
         return redirect("gestion_comptes")
 
     u = get_object_or_404(User, id=user_id)
+
+
+    if u.id == request.user.id:
+        messages.error(request, "Impossible de modifier votre propre rôle.")
+        return redirect("gestion_comptes")
+
+
+    if new_role == "CHAUFFEUR":
+        Chauffeur.objects.get_or_create(
+            user=u,
+            defaults={
+                "nom": (u.get_full_name().strip() or u.username),
+                "telephone": u.telephone,
+            },
+        )
+    else:
+
+        try:
+            ch = u.chauffeur_profile
+            ch.user = None
+            ch.save()
+        except Exception:
+            pass
+
     u.role = new_role
     u.save()
+
     messages.success(request, "Rôle modifié.")
     return redirect("gestion_comptes")
 
 
+
+# =========================
+# OCR (Vérification du paiement par photo)
+# =========================
+
+_reader = None
+
+def get_reader():
+    "Chargement du lecteur OCR une seule fois (chargement différé)."
+    global _reader
+    if _reader is None:
+        _reader = easyocr.Reader(['ar', 'en'], gpu=False)
+    return _reader
+
+
+def verify_payment_ocr(image_file, expected_amount, company_phone="37614881"):
+    """
+    يرجع:
+      (ok: bool, transaction_id: str|None)
+
+    ok=True إذا:
+      - رقم الشركة موجود
+      - المبلغ موجود
+      - رقم عملية (transaction_id) موجود
+    """
+    try:
+        if not image_file:
+            return False, None
+
+        image_file.seek(0)
+        img = Image.open(image_file).convert("RGB")
+
+        # تسريع OCR: تصغير الصورة إذا كانت كبيرة
+        img.thumbnail((1400, 1400))
+
+        img_np = np.array(img)
+        results = get_reader().readtext(img_np, detail=0)
+
+        full_text = " ".join(results).lower()
+
+        # استخراج الأرقام
+        all_numbers = re.findall(r"\d+", full_text)
+
+        # تحقق رقم الشركة
+        is_company_ok = (
+            company_phone in all_numbers
+            or any(company_phone in n for n in all_numbers)
+        )
+
+        # تحقق المبلغ (تقريبي)
+        amt_float = float(expected_amount)
+        amt_main = str(int(amt_float))
+        amt_rounded = str(round(amt_float))
+
+        is_amount_ok = (
+            any(amt_main in n for n in all_numbers)
+            or any(amt_rounded in n for n in all_numbers)
+            or str(amt_float) in full_text
+        )
+
+        # =========================
+        # استخراج transaction_id بدون الاعتماد على تاريخ (غير ثابت)
+        # =========================
+        transaction_id = None
+
+        # استبعاد رقم الشركة والمبلغ (حتى لا نلتقطهما كـ transaction_id)
+        blocked = {company_phone, amt_main, amt_rounded}
+
+        # مرشحون: أرقام طويلة (معرّف المعاملة عادةً طويل)
+        candidates = [n for n in all_numbers if len(n) >= 10 and n not in blocked]
+
+        if candidates:
+            # خذ أطول رقم (غالباً هو معرّف المعاملة)
+            transaction_id = max(candidates, key=len)
+        else:
+            # fallback: لو ما في أرقام طويلة، خذ أي رقم بطول >= 8 ليس رقم الشركة
+            fallback = [n for n in all_numbers if len(n) >= 8 and n != company_phone]
+            if fallback:
+                transaction_id = max(fallback, key=len)
+
+        ok = is_company_ok and is_amount_ok and (transaction_id is not None)
+        return ok, transaction_id
+
+    except Exception as e:
+        print(f"OCR Error: {e}")
+        return False, None
+
+
+# =========================
+# Billet/formulaire PDF (téléchargeable après la réservation) - Belle copie
+# =========================
+
+def _build_ticket_pdf(reservation) -> io.BytesIO:
+
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    W, H = A4
+
+    # ====== couleurs ======
+    BLUE = colors.HexColor("#1677ff")
+    LIGHT_BG = colors.HexColor("#f5f7fb")
+    BORDER = colors.HexColor("#d9e2ef")
+    TEXT = colors.HexColor("#0f172a")
+    MUTED = colors.HexColor("#64748b")
+    GREEN = colors.HexColor("#16a34a")
+
+    # ====== Contexte général ======
+    c.setFillColor(LIGHT_BG)
+    c.rect(0, 0, W, H, stroke=0, fill=1)
+
+    # ====== Barre latérale ======
+    side_w = 1.0 * cm
+    c.setFillColor(colors.HexColor("#0b4fb3"))
+    c.rect(0, 0, side_w, H, stroke=0, fill=1)
+
+    # ====== Header ======
+    header_h = 3.2 * cm
+    c.setFillColor(BLUE)
+    c.roundRect(side_w + 1.2*cm, H - header_h - 1.2*cm, W - side_w - 2.4*cm, header_h, 18, stroke=0, fill=1)
+
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 20)
+    c.drawString(side_w + 2.0*cm, H - 2.2*cm, "TICKET DE VOYAGE - SGT")
+    c.setFont("Helvetica", 11)
+    c.drawString(side_w + 2.0*cm, H - 2.75*cm, "Société de Gestion de Transport")
+
+    # ====== Card ======
+    card_x = side_w + 1.2*cm
+    card_y = 2.2*cm
+    card_w = W - side_w - 2.4*cm
+    card_h = H - header_h - 4.2*cm
+
+    c.setFillColor(colors.white)
+    c.setStrokeColor(BORDER)
+    c.setLineWidth(1)
+    c.roundRect(card_x, card_y, card_w, card_h, 16, stroke=1, fill=1)
+
+    # ====== Données ======
+    v = reservation.voyage
+    t = v.trajet
+    total = float(reservation.nb_sieges * v.prix_par_siege) if v.prix_par_siege is not None else 0.0
+
+    left_x = card_x + 1.4*cm
+    top_y = card_y + card_h - 1.3*cm
+
+    right_x = card_x + card_w - 7.2*cm
+    qr_size = 5.2*cm
+
+    c.setFillColor(MUTED)
+    c.setFont("Helvetica", 10)
+    c.drawString(left_x, top_y, "Référence")
+
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 16)
+    ref = f"#{reservation.id_reservation}{v.date_depart.strftime('%Y%m%d')}"
+    c.drawString(left_x, top_y - 0.65*cm, ref)
+
+    c.setFillColor(MUTED)
+    c.setFont("Helvetica", 10)
+    c.drawString(left_x + 9.0*cm, top_y, "Date d'émission")
+
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(left_x + 9.0*cm, top_y - 0.65*cm, f"{reservation.date_reservation.strftime('%d/%m/%Y %H:%M')}")
+
+    c.setStrokeColor(BORDER)
+    c.line(card_x + 1.2*cm, top_y - 1.2*cm, card_x + card_w - 1.2*cm, top_y - 1.2*cm)
+
+    y = top_y - 2.0*cm
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(left_x, y, "Itinéraire")
+
+    box_y = y - 2.1*cm
+    box_h = 2.0*cm
+    c.setFillColor(colors.HexColor("#f8fafc"))
+    c.setStrokeColor(BORDER)
+    c.roundRect(left_x, box_y, card_w - 9.0*cm, box_h, 12, stroke=1, fill=1)
+
+    c.setFillColor(MUTED)
+    c.setFont("Helvetica", 10)
+    c.drawString(left_x + 0.7*cm, box_y + 1.25*cm, "Départ")
+    c.drawString(left_x + (card_w - 9.0*cm)/2 + 0.2*cm, box_y + 1.25*cm, "Arrivée")
+
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(left_x + 0.7*cm, box_y + 0.55*cm, f"{t.ville_depart}")
+    c.drawString(left_x + (card_w - 9.0*cm)/2 + 0.2*cm, box_y + 0.55*cm, f"{t.ville_arrivee}")
+
+    info_y = box_y - 1.6*cm
+    c.setFillColor(MUTED)
+    c.setFont("Helvetica", 10)
+    c.drawString(left_x, info_y + 0.9*cm, "Passager")
+    c.drawString(left_x + 6.0*cm, info_y + 0.9*cm, "Sièges")
+    c.drawString(left_x + 10.0*cm, info_y + 0.9*cm, "Prix Total")
+
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 12)
+    passenger = f"{reservation.client.username}" if hasattr(reservation, "client") and reservation.client else "-"
+    c.drawString(left_x, info_y + 0.35*cm, passenger)
+    c.drawString(left_x + 6.0*cm, info_y + 0.35*cm, str(reservation.nb_sieges))
+    c.drawString(left_x + 10.0*cm, info_y + 0.35*cm, f"{total:.2f} MRU")
+
+    badge_y = info_y - 1.4*cm
+    c.setFillColor(GREEN)
+    c.roundRect(right_x, badge_y + 0.2*cm, qr_size, 0.75*cm, 10, stroke=0, fill=1)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawCentredString(right_x + qr_size/2, badge_y + 0.47*cm, "PAIEMENT CONFIRMÉ")
+
+    c.setFillColor(MUTED)
+    c.setFont("Helvetica", 9.5)
+    c.drawString(right_x, badge_y - 0.2*cm, "Transaction ID:")
+    c.setFillColor(TEXT)
+    c.setFont("Helvetica-Bold", 10.5)
+    c.drawString(right_x, badge_y - 0.8*cm, f"{reservation.transaction_id or '-'}")
+
+    try:
+        qr_data = f"RES:{reservation.id_reservation}|TID:{reservation.transaction_id or ''}|TOTAL:{total:.2f}|TRAJET:{t.ville_depart}-{t.ville_arrivee}"
+        qr_img = qrcode.make(qr_data)
+
+        qr_buf = io.BytesIO()
+        qr_img.save(qr_buf, format="PNG")
+        qr_buf.seek(0)
+
+        qr_reader = ImageReader(qr_buf)
+        qr_y = top_y - 1.2*cm - qr_size
+        c.drawImage(qr_reader, right_x, qr_y, qr_size, qr_size, mask="auto")
+
+        c.setFillColor(MUTED)
+        c.setFont("Helvetica", 9)
+        c.drawCentredString(right_x + qr_size/2, qr_y - 0.35*cm, "QR Code")
+    except Exception as e:
+        print("QR skipped:", e)
+
+    c.setFillColor(MUTED)
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawString(card_x + 1.4*cm, card_y + 1.0*cm, "Merci pour votre confiance.")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
+from django.views.decorators.http import require_http_methods
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_mobile_reservations(request):
+    """
+    Endpoint compatible Flutter:
+    - GET  /api/mobile/reservations/?user_id=1  => réservations utilisateur
+    - POST /api/mobile/reservations/           => créer réservation
+    """
+
+    if request.method == "GET":
+        user_id_str = (request.GET.get("user_id") or "").strip()
+
+        # ✅ Évite ValueError: int("null") / int(" ")
+        if not user_id_str.isdigit():
+            return JsonResponse(
+                {"status": "error", "message": "user_id requis et doit être numérique"},
+                status=400
+            )
+
+        return api_mes_reservations_mobile(request, int(user_id_str))
+
+    # POST
+    return api_ajouter_reservation_mobile(request)
+
+
+
+def api_mobile_ticket_pdf(request, id_reservation):
+    res = get_object_or_404(Reservation, id_reservation=id_reservation)
+
+    if not (res.statut == "confirmé" and res.statut_paiement == "paye"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Ticket disponible uniquement après validation."
+        }, status=403)
+
+    pdf_buffer = _build_ticket_pdf(res)  # ✅ ReportLab (بدون WeasyPrint)
+    filename = f"ticket_{res.id_reservation}.pdf"
+
+    return FileResponse(
+        pdf_buffer,
+        as_attachment=True,
+        filename=filename,
+        content_type="application/pdf",
+    )
+
 # =========================
 # APIs Mobile (Flutter)
 # =========================
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
 
 @csrf_exempt
 def api_login_mobile(request):
@@ -943,20 +968,25 @@ def api_login_mobile(request):
         if not user.is_active:
             return JsonResponse({"status": "error", "message": "Compte désactivé"}, status=403)
 
+        role = getattr(user, "role", "")
 
-        if getattr(user, "role", "") != "CLIENT":
-            return JsonResponse({"status": "error", "message": "Accès mobile réservé aux clients."}, status=403)
+        # ✅ autoriser Client + Chauffeur sur mobile
+        if role not in ("CLIENT", "CHAUFFEUR"):
+            return JsonResponse({"status": "error", "message": "Accès mobile réservé aux clients et chauffeurs."}, status=403)
+
+        # ✅ créer/retourner token DRF
+        token, _ = Token.objects.get_or_create(user=user)
 
         return JsonResponse({
             "status": "success",
             "user_id": user.id,
             "username": user.username,
-            "role": getattr(user, "role", "")
+            "role": role,
+            "token": token.key,
         })
 
     except Exception:
         return JsonResponse({"status": "error", "message": "Format invalide"}, status=400)
-
 
 @csrf_exempt
 def api_register_mobile(request):
@@ -1277,7 +1307,7 @@ def api_web_clients_search(request):
     if q:
         qs = qs.filter(username__icontains=q)
 
-    qs = qs[:20]  # ✅ رجّع 20 فقط
+    qs = qs[:20]
 
     results = []
     for u in qs:
@@ -1328,10 +1358,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.files.base import ContentFile
 from django.db import transaction, DatabaseError
 
-# تأكد أن عندك هذه الاستيرادات حسب مشروعك:
-# from django.contrib.auth.models import User
-# from .models import Reservation, Voyage
-# from .utils import safe_choice   # إذا كانت عندك
+
 
 @csrf_exempt
 def api_ajouter_reservation_mobile(request):
@@ -1461,51 +1488,32 @@ def api_ajouter_reservation_mobile(request):
     )
 
 
-# =========================================================
-# ✅ (MOBILE) عرض حجوزات مستخدم (كما هو عندك لكن مضبوط)
-# =========================================================
-from django.http import JsonResponse
-from django.contrib.auth import get_user_model
-from django.views.decorators.http import require_GET
-
-from .models import Reservation
 
 
-from django.http import JsonResponse
-from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
-from django.views.decorators.http import require_GET
-
-from .models import Reservation
-
-
-from django.urls import reverse
 from django.http import JsonResponse, FileResponse
-from django.shortcuts import get_object_or_404
-from django.views.decorators.http import require_GET
-from django.contrib.auth import get_user_model
+
 
 import re
 from decimal import Decimal, InvalidOperation
 
-from django.http import JsonResponse
+
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
-from django.urls import reverse
+
 from django.views.decorators.http import require_GET
 
 from .models import Reservation
 
 
 # ===========================
-# ✅ Helpers: استخراج السعر من أي مكان
+# ✅ Helpers:
 # ===========================
 def _parse_decimal(value):
-    """يحاول تحويل أي قيمة إلى Decimal (حتى لو كانت string مثل '897 MRU')"""
+
     if value is None:
         return None
 
-    # لو رقم جاهز
+
     try:
         return Decimal(str(value))
     except Exception:
@@ -1532,7 +1540,7 @@ from decimal import Decimal
 from django.urls import reverse
 
 # ===========================
-# ✅ سيريالايزر موحد للموبايل (مع Total صحيح + date)
+# Sérialiseur unifié pour mobile (avec total et date corrects)
 # ===========================
 def _serialize_reservation_mobile(r, request):
     voyage = getattr(r, "voyage", None)
@@ -1547,13 +1555,13 @@ def _serialize_reservation_mobile(r, request):
     statut_display = raw_statut.strip()
     paiement_display = raw_paiement.strip()
 
-    # ✅ توحيد statut
+
     if raw_statut.lower().strip() in ["confirme", "confirmé", "confirmed"]:
         statut_display = "confirmé"
     elif raw_statut.lower().strip() in ["reserve", "réservé", "reservé", "reserved"]:
         statut_display = "réservé"
 
-    # ✅ توحيد paiement
+
     if raw_paiement.lower().strip() in ["paye", "payé", "paid"]:
         paiement_display = "payé"
     elif raw_paiement.lower().strip() in ["en_attente", "en attente", "pending"]:
@@ -1561,7 +1569,7 @@ def _serialize_reservation_mobile(r, request):
     elif raw_paiement.lower().strip() in ["echoue", "échoué", "failed"]:
         paiement_display = "echoue"
 
-    # ========== CODES (بدون accent) ==========
+    # ========== CODES (sans accent) ==========
     statut_code = raw_statut.lower().strip()
     paiement_code = raw_paiement.lower().strip()
 
@@ -1570,10 +1578,10 @@ def _serialize_reservation_mobile(r, request):
     if paiement_code in ["payé"]:
         paiement_code = "paye"
 
-    # ✅ ticket_ready (الشرط الحقيقي)
+    # ✅ ticket_ready
     ticket_ready = (statut_display == "confirmé" and paiement_display == "payé")
 
-    # ✅ رابط PDF فقط إذا جاهز
+
     ticket_url = None
     if ticket_ready and rid is not None:
         ticket_url = request.build_absolute_uri(
@@ -1606,7 +1614,7 @@ def _serialize_reservation_mobile(r, request):
         prix_unitaire = None
 
     # ===========================
-    # ✅ DATE FOR FLUTTER (حتى لا تظهر null)
+    # ✅ DATE FOR FLUTTER
     # ===========================
     date_depart_str = ""
     heure_depart_str = ""
@@ -1634,7 +1642,7 @@ def _serialize_reservation_mobile(r, request):
 
         "trajet": f"{trajet.ville_depart} -> {trajet.ville_arrivee}" if trajet else "",
 
-        # ✅ هذا المفتاح يحل مشكلة null في Flutter
+
         "date": date_affiche,
 
         "date_depart": date_depart_str,
@@ -1643,17 +1651,17 @@ def _serialize_reservation_mobile(r, request):
         "nb_sieges": nb,
         "date_reservation": r.date_reservation.strftime("%Y-%m-%d %H:%M:%S") if getattr(r, "date_reservation", None) else "",
 
-        # ✅ الحقول التي يقرأها Flutter
+
         "statut": statut_display,
         "paiement": paiement_display,
 
-        # ✅ احتياط (بعض نسخ Dart تستعملها)
+
         "statut_code": statut_code,
         "paiement_code": paiement_code,
         "statut_paiement": paiement_display,
         "statut_paiement_code": paiement_code,
 
-        # ✅ إثبات الدفع
+
         "preuve_paiement": preuve_url,
 
         # ✅ Ticket
@@ -1665,7 +1673,7 @@ def _serialize_reservation_mobile(r, request):
         "prix_unitaire": prix_unitaire,
         "total": total,
 
-        # ✅ مفاتيح إضافية احتياطًا (بدون تعديل Dart)
+
         "total_a_payer": total,
         "montant_total": total,
         "prix_total": total,
@@ -1673,13 +1681,13 @@ def _serialize_reservation_mobile(r, request):
 
 
 # ===========================
-# ✅ Helper: استخراج سعر الوحدة من أي object
+# ✅ Helper
 # ===========================
 def _find_unit_price(obj):
     if obj is None:
         return None
 
-    # جرّب أسماء حقول كثيرة
+
     candidates = [
         "prix_par_siege", "prix_siege", "prix",
         "price", "unit_price", "tarif",
@@ -1785,7 +1793,7 @@ def voir_preuve_paiement(request, id_reservation):
 
 
 # =========================
-# DRF API (اختياري)
+# DRF API
 # =========================
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -1830,3 +1838,109 @@ def api_mobile_payment_options(request):
         ]
     }
     return JsonResponse(data, safe=False)
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def chauffeur_voyages(request):
+    # ✅ role عندك uppercase
+    if getattr(request.user, "role", None) != "CHAUFFEUR":
+        return Response({"detail": "Accès interdit"}, status=status.HTTP_403_FORBIDDEN)
+
+
+    qs = Voyage.objects.filter(chauffeur__user=request.user).order_by("-date_depart", "-heure_depart")
+
+    data = []
+    for v in qs:
+        data.append({
+            "id_voyage": v.id_voyage,
+            "trajet": str(v.trajet),
+            "ville_depart": v.trajet.ville_depart,
+            "ville_arrivee": v.trajet.ville_arrivee,
+            "date_depart": str(v.date_depart),
+            "heure_depart": str(v.heure_depart),
+            "prix_par_siege": str(v.prix_par_siege),
+            "sieges_disponibles": v.sieges_disponibles,
+            "statut": v.check_statut,  # OUVERT / FERMÉ_...
+            "vehicule": v.vehicule.matricule,
+        })
+
+    return Response(data)
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from rest_framework.authtoken.models import Token
+
+from .models import Voyage
+from django.core.paginator import Paginator
+
+
+@csrf_exempt
+def api_chauffeur_voyages(request):
+    # ✅ CORS preflight
+    if request.method == "OPTIONS":
+        return JsonResponse({}, status=200)
+
+    if request.method != "GET":
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée"}, status=405)
+
+    # ✅ Lire Token depuis Authorization header
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Token "):
+        return JsonResponse({"status": "error", "message": "Token manquant"}, status=401)
+
+    key = auth.replace("Token ", "").strip()
+    if not key:
+        return JsonResponse({"status": "error", "message": "Token vide"}, status=401)
+
+    try:
+        token_obj = Token.objects.select_related("user").get(key=key)
+    except Token.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Token invalide"}, status=401)
+
+    user = token_obj.user
+
+    if not user.is_active:
+        return JsonResponse({"status": "error", "message": "Compte désactivé"}, status=403)
+
+    if getattr(user, "role", "") != "CHAUFFEUR":
+        return JsonResponse({"status": "error", "message": "Accès réservé au chauffeur"}, status=403)
+
+    # ✅ voyages assignés à ce chauffeur (via Chauffeur.user)
+    qs = Voyage.objects.filter(chauffeur__user=user).select_related("trajet", "vehicule", "chauffeur").order_by("-date_depart", "-heure_depart")
+
+    # =========================
+    # Pagination
+    # =========================
+    page = int(request.GET.get("page", 1))
+    page_size = int(request.GET.get("page_size", 10))
+
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page)
+
+    results = []
+    for v in page_obj.object_list:
+        results.append({
+            "id_voyage": v.id_voyage,
+            "ville_depart": v.trajet.ville_depart if v.trajet else "",
+            "ville_arrivee": v.trajet.ville_arrivee if v.trajet else "",
+            "date_depart": v.date_depart.strftime("%Y-%m-%d") if v.date_depart else "",
+            "heure_depart": v.heure_depart.strftime("%H:%M") if v.heure_depart else "",
+            "vehicule_matricule": v.vehicule.matricule if v.vehicule else "",
+            "statut": getattr(v, "check_statut", ""),
+        })
+
+    return JsonResponse({
+        "count": paginator.count,
+        "page": page_obj.number,
+        "page_size": page_size,
+        "has_next": page_obj.has_next(),
+        "results": results,
+    }, status=200)
+

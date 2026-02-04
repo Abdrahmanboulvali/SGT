@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'ui/app_theme.dart';
 import 'LoginScreen.dart';
 import 'DashboardScreen.dart';
+import 'ui/DriverTripsScreen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -22,7 +23,16 @@ class _MyAppState extends State<MyApp> {
     final userId = prefs.getInt('user_id');
     final username = prefs.getString('username');
     if (userId == null || username == null) return null;
-    return {"user_id": userId, "username": username};
+
+    final role = prefs.getString("role") ?? "CLIENT";
+    final token = prefs.getString("token") ?? "";
+
+    return {
+      "user_id": userId,
+      "username": username,
+      "role": role,
+      "token": token,
+    };
   }
 
   @override
@@ -36,14 +46,20 @@ class _MyAppState extends State<MyApp> {
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
+              body: Center(child: CircularProgressIndicator()),
             );
           }
+
           if (snap.data == null) {
             return const LoginScreen();
           }
+
+          final role = (snap.data!["role"] ?? "CLIENT").toString();
+
+          if (role == "CHAUFFEUR") {
+            return const DriverTripsScreen();
+          }
+
           return DashboardScreen(
             userId: snap.data!["user_id"] as int,
             username: snap.data!["username"] as String,

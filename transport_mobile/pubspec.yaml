@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  # التعديل هنا: تم تغيير 3.5.4 إلى 3.2.4 ليتوافق مع جهازك
+
   sdk: '>=3.2.4 <4.0.0'
 
 dependencies:
@@ -21,7 +21,7 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
 
-  # المكتبات المطلوبة لمشروعك (تأكد من وجود نسخة واحدة فقط من كل منها)
+
   http: ^1.1.0
   image_picker: ^1.1.2
   url_launcher: ^6.3.1
@@ -35,10 +35,13 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
 
-  # إذا كان لديك صور أو أيقونات خاصة، أضفها هنا مستقبلاً
-  # assets:
-  #   - assets/images/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
